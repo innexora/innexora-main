@@ -73,7 +73,9 @@ class DatabaseManager {
   }
 
   // Get or create tenant database connection
-  async getTenantConnection(hotelSubdomain, databaseUrl = null) {
+  // Uses MONGODB_TENANT_URI for all tenant databases with hotel-specific database names
+  // Each hotel gets its own database within the shared tenant cluster: hotel_{subdomain}
+  async getTenantConnection(hotelSubdomain) {
     const connectionKey = `tenant_${hotelSubdomain}`;
 
     // Check existing connection
@@ -87,8 +89,12 @@ class DatabaseManager {
     }
 
     try {
-      // Use main MongoDB URI but with different database name
-      const baseUri = databaseUrl || process.env.MONGODB_URI;
+      // Use MONGODB_TENANT_URI for all tenant databases with hotel-specific database name
+      const tenantUri = process.env.MONGODB_TENANT_URI;
+      
+      if (!tenantUri) {
+        throw new Error("MONGODB_TENANT_URI environment variable is not set");
+      }
 
       const connectionOptions = {
         maxPoolSize: 20,
@@ -101,10 +107,10 @@ class DatabaseManager {
         retryReads: true,
         maxIdleTimeMS: 30000,
         heartbeatFrequencyMS: 10000,
-        dbName: `hotel_${hotelSubdomain}`,
+        dbName: `hotel_${hotelSubdomain}`, // Each hotel gets its own database in the tenant cluster
       };
 
-      const connection = mongoose.createConnection(baseUri, connectionOptions);
+      const connection = mongoose.createConnection(tenantUri, connectionOptions);
 
       // Wait for connection
       await new Promise((resolve, reject) => {
@@ -129,7 +135,7 @@ class DatabaseManager {
       });
 
       this.connections.set(connectionKey, connection);
-      console.log(`✅ Tenant database connected for ${hotelSubdomain}`);
+      console.log(`✅ Tenant database connected for ${hotelSubdomain} using shared tenant cluster`);
       return connection;
     } catch (error) {
       console.error(`❌ Tenant database error for ${hotelSubdomain}:`, error);

@@ -98,8 +98,7 @@ exports.tenantMiddleware = async (req, res, next) => {
     // Get tenant database connection
     try {
       const tenantConnection = await databaseManager.getTenantConnection(
-        hotel.subdomain,
-        hotel.database_url
+        hotel.subdomain
       );
 
       const tenantModels = databaseManager.getTenantModels(tenantConnection);
@@ -119,7 +118,7 @@ exports.tenantMiddleware = async (req, res, next) => {
       req.isPublicRoute = false;
 
       console.log(
-        `🏨 Tenant middleware: Setup complete for ${subdomain} - Hotel: ${hotel.name}, Models: ${Object.keys(tenantModels).length}`
+        `🏨 Tenant middleware: Setup complete for ${subdomain} - Hotel: ${hotel.name}, Models: ${Object.keys(tenantModels).length} (using shared tenant cluster)`
       );
     } catch (dbError) {
       console.error(

@@ -28,13 +28,15 @@ const hotelSchema = new mongoose.Schema(
     database_url: {
       type: String,
       trim: true,
-      required: [true, "MongoDB Atlas database URL is required"],
+      required: false, // LEGACY FIELD: No longer required since we use shared MONGODB_TENANT_URI
       match: [
         /^mongodb(\+srv)?:\/\/.+/,
         "Please enter a valid MongoDB Atlas connection string",
       ],
       validate: {
         validator: function (url) {
+          // Skip validation if no URL provided (using shared tenant cluster)
+          if (!url) return true;
           // Additional validation for MongoDB Atlas URLs
           return (
             url.includes("mongodb.net") ||

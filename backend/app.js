@@ -105,9 +105,20 @@ app.use((req, res, next) => {
   });
 });
 
-// JWT secret check
+// Environment variables validation
 if (!process.env.JWT_SECRET) {
   console.error("FATAL ERROR: JWT_SECRET is not defined");
+  process.exit(1);
+}
+
+if (!process.env.MONGODB_URI) {
+  console.error("FATAL ERROR: MONGODB_URI is not defined");
+  process.exit(1);
+}
+
+if (!process.env.MONGODB_TENANT_URI) {
+  console.error("FATAL ERROR: MONGODB_TENANT_URI is not defined");
+  console.error("This is required for tenant database connections");
   process.exit(1);
 }
 

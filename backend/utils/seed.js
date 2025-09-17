@@ -54,8 +54,7 @@ const createSampleHotels = async (managerId) => {
       subdomain: "grandparadise",
       description: "A luxurious 5-star hotel with stunning ocean views",
       website: "https://grandparadise.com",
-      database_url:
-        process.env.MONGODB_URI || "mongodb://localhost:27017/grandparadise",
+      // database_url removed - now using shared MONGODB_TENANT_URI
       location: {
         address: "123 Ocean Drive",
         city: "Miami",
@@ -83,8 +82,7 @@ const createSampleHotels = async (managerId) => {
       subdomain: "mountainview",
       description: "A cozy lodge with breathtaking mountain views",
       website: "https://mountainviewlodge.com",
-      database_url:
-        process.env.MONGODB_URI || "mongodb://localhost:27017/mountainview",
+      // database_url removed - now using shared MONGODB_TENANT_URI
       location: {
         address: "456 Alpine Road",
         city: "Aspen",
@@ -112,8 +110,7 @@ const createSampleHotels = async (managerId) => {
       subdomain: "marriott",
       description: "A premium business hotel with modern amenities",
       website: "https://marriott.com",
-      database_url:
-        process.env.MONGODB_URI || "mongodb://localhost:27017/marriott",
+      // database_url removed - now using shared MONGODB_TENANT_URI
       location: {
         address: "789 Business District",
         city: "New York",

@@ -14,7 +14,7 @@ const seedTenantData = async () => {
     console.log('✅ Database manager initialized');
     
     // Get tenant connection for marriott
-    const tenantConnection = await databaseManager.getTenantConnection('marriott', process.env.MONGODB_URI);
+    const tenantConnection = await databaseManager.getTenantConnection('marriott');
     const tenantModels = databaseManager.getTenantModels(tenantConnection);
     
     console.log('✅ Connected to marriott tenant database');

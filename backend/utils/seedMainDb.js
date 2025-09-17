@@ -8,9 +8,7 @@ const sampleHotels = [
     name: "Marriott Downtown",
     subdomain: "marriott",
     website: "https://www.marriott.com",
-    database_url:
-      process.env.SAMPLE_HOTEL_DB_URL ||
-      "mongodb+srv://sample:password@cluster.mongodb.net/marriott_hotel",
+    // database_url removed - now using shared MONGODB_TENANT_URI
     description: "Luxury hotel in the heart of downtown",
     logo_url:
       "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Marriott_Logo.svg/800px-Marriott_Logo.svg.png",
@@ -42,9 +40,7 @@ const sampleHotels = [
     name: "Budget Inn Express",
     subdomain: "budgetinn",
     website: "https://www.budgetinn.com",
-    database_url:
-      process.env.SAMPLE_HOTEL_DB_URL_2 ||
-      "mongodb+srv://sample:password@cluster.mongodb.net/budget_inn",
+    // database_url removed - now using shared MONGODB_TENANT_URI
     description: "Affordable accommodation for business travelers",
     logo_url: "https://via.placeholder.com/200x200?text=Budget+Inn",
     cover_image_url:
