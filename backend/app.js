@@ -95,10 +95,10 @@ app.use(cookieParser());
 app.use((req, res, next) => {
   tenantMiddleware(req, res, (err) => {
     if (err) {
-      console.error('Tenant middleware error:', err);
+      console.error("Tenant middleware error:", err);
       return res.status(500).json({
         success: false,
-        message: 'Internal server error',
+        message: "Internal server error",
       });
     }
     next();

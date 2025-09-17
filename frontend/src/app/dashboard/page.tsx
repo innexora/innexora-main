@@ -164,18 +164,21 @@ export default function DashboardPage() {
     }
   };
 
-
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-black dark:text-white">Total Rooms</CardTitle>
+            <CardTitle className="text-sm font-medium text-black dark:text-white">
+              Total Rooms
+            </CardTitle>
             <Building className="h-4 w-4 text-black dark:text-white opacity-70" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-semibold text-black dark:text-white">{stats.totalRooms}</div>
+            <div className="text-xl font-semibold text-black dark:text-white">
+              {stats.totalRooms}
+            </div>
             <p className="text-xs text-black dark:text-white opacity-70">
               {isLoading ? "Loading..." : `${stats.availableRooms} available`}
             </p>
@@ -201,11 +204,15 @@ export default function DashboardPage() {
 
         <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-black dark:text-white">Active Guests</CardTitle>
+            <CardTitle className="text-sm font-medium text-black dark:text-white">
+              Active Guests
+            </CardTitle>
             <Users className="h-4 w-4 text-black dark:text-white opacity-70" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-semibold text-black dark:text-white">{stats.checkedInGuests}</div>
+            <div className="text-xl font-semibold text-black dark:text-white">
+              {stats.checkedInGuests}
+            </div>
             <p className="text-xs text-black dark:text-white opacity-70">
               {isLoading ? "Loading..." : `${stats.totalGuests} total guests`}
             </p>
@@ -220,7 +227,9 @@ export default function DashboardPage() {
             <ClipboardList className="h-4 w-4 text-black dark:text-white opacity-70" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-semibold text-black dark:text-white">{stats.pendingTickets}</div>
+            <div className="text-xl font-semibold text-black dark:text-white">
+              {stats.pendingTickets}
+            </div>
             <p className="text-xs text-black dark:text-white opacity-70">
               {isLoading
                 ? "Loading..."
@@ -233,7 +242,9 @@ export default function DashboardPage() {
       {/* Room Status Overview */}
       <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
         <CardHeader>
-          <CardTitle className="text-base font-medium text-black dark:text-white">Room Status Overview</CardTitle>
+          <CardTitle className="text-base font-medium text-black dark:text-white">
+            Room Status Overview
+          </CardTitle>
           <CardDescription className="text-sm text-black dark:text-white opacity-70">
             Current status of all rooms in the hotel
           </CardDescription>
@@ -248,7 +259,9 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium text-black dark:text-white opacity-70">
                   Available
                 </p>
-                <p className="text-xl font-semibold text-black dark:text-white">{stats.availableRooms}</p>
+                <p className="text-xl font-semibold text-black dark:text-white">
+                  {stats.availableRooms}
+                </p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -259,7 +272,9 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium text-black dark:text-white opacity-70">
                   Occupied
                 </p>
-                <p className="text-xl font-semibold text-black dark:text-white">{stats.occupiedRooms}</p>
+                <p className="text-xl font-semibold text-black dark:text-white">
+                  {stats.occupiedRooms}
+                </p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -270,7 +285,9 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium text-black dark:text-white opacity-70">
                   Maintenance
                 </p>
-                <p className="text-xl font-semibold text-black dark:text-white">{stats.maintenanceRooms}</p>
+                <p className="text-xl font-semibold text-black dark:text-white">
+                  {stats.maintenanceRooms}
+                </p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -281,7 +298,9 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium text-black dark:text-white opacity-70">
                   Cleaning
                 </p>
-                <p className="text-xl font-semibold text-black dark:text-white">{stats.cleaningRooms}</p>
+                <p className="text-xl font-semibold text-black dark:text-white">
+                  {stats.cleaningRooms}
+                </p>
               </div>
             </div>
           </div>
@@ -291,7 +310,9 @@ export default function DashboardPage() {
       {/* Quick Actions */}
       <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
         <CardHeader>
-          <CardTitle className="text-base font-medium text-black dark:text-white">Quick Actions</CardTitle>
+          <CardTitle className="text-base font-medium text-black dark:text-white">
+            Quick Actions
+          </CardTitle>
           <CardDescription className="text-sm text-black dark:text-white opacity-70">
             Access key hotel management features
           </CardDescription>
@@ -344,7 +365,9 @@ export default function DashboardPage() {
       {/* Recent Activity */}
       <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
         <CardHeader>
-          <CardTitle className="text-base font-medium text-black dark:text-white">Recent Activity</CardTitle>
+          <CardTitle className="text-base font-medium text-black dark:text-white">
+            Recent Activity
+          </CardTitle>
           <CardDescription className="text-sm text-black dark:text-white opacity-70">
             Latest updates from your hotel operations
           </CardDescription>

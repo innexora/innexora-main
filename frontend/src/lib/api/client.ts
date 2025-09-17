@@ -168,7 +168,9 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     // Don't log 400 errors with billDetails as they are expected business logic
-    if (!(error.response?.status === 400 && error.response?.data?.billDetails)) {
+    if (
+      !(error.response?.status === 400 && error.response?.data?.billDetails)
+    ) {
       console.error("API Error:", {
         url: error.config?.url,
         status: error.response?.status,
