@@ -34,6 +34,11 @@ const nextConfig: NextConfig = {
     },
   },
   async rewrites() {
+    // In production, we don't need rewrites as API will be on separate domain
+    if (process.env.NODE_ENV === 'production') {
+      return [];
+    }
+    
     return [
       {
         source: "/api/:path*",
