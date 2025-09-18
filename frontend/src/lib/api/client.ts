@@ -6,6 +6,11 @@ const getBaseUrl = (): string => {
     return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050/api";
   }
 
+  // If we have a production API URL set, use it
+  if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes("localhost")) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+
   const host = window.location.host;
   const protocol = window.location.protocol;
 
@@ -21,25 +26,12 @@ const getBaseUrl = (): string => {
       console.log("🌐 Axios API Client: Tenant URL constructed:", baseUrl);
       return baseUrl;
     }
-  } else if (host.includes(".")) {
-    // For production domains like subdomain.domain.com
-    const hostParts = host.split(".");
-    if (hostParts.length >= 3) {
-      const subdomain = hostParts[0];
-      if (subdomain !== "www" && subdomain !== "app") {
-        const domain = hostParts.slice(1).join(".");
-        const baseUrl = `${protocol}//${subdomain}.${domain}/api`;
-        console.log(
-          "🌐 Axios API Client: Production tenant URL constructed:",
-          baseUrl
-        );
-        return baseUrl;
-      }
-    }
   }
 
-  // Fallback to main domain
-  const baseUrl = `${protocol}//${host}/api`;
+  // Fallback to main domain or localhost for development
+  const baseUrl = host.includes("localhost") 
+    ? `${protocol}//${host}/api`
+    : process.env.NEXT_PUBLIC_API_URL || `${protocol}//${host}/api`;
   console.log("🌐 Axios API Client: Main domain URL constructed:", baseUrl);
   return baseUrl;
 };
