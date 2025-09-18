@@ -58,6 +58,7 @@ import { apiClient } from "@/lib/api/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { io, Socket } from "socket.io-client";
+import { getSocketUrl, socketConfig } from "@/lib/socket";
 
 interface Message {
   _id: string;
@@ -183,11 +184,7 @@ export default function DashboardPage() {
 
     // Set up WebSocket connection for real-time ticket notifications
     const setupWebSocket = () => {
-      const newSocket = io("http://localhost:5050", {
-        transports: ["websocket", "polling"],
-        timeout: 20000,
-        forceNew: true,
-      });
+      const newSocket = io(getSocketUrl(), socketConfig);
 
       newSocket.on("connect", () => {
         console.log("🔗 Connected to WebSocket server");

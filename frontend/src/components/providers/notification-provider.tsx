@@ -9,6 +9,7 @@ import {
   ReactNode,
 } from "react";
 import { io, Socket } from "socket.io-client";
+import { getSocketUrl, socketConfig } from "@/lib/socket";
 import { useNotificationSound } from "@/hooks/useNotificationSound";
 import { toast } from "sonner";
 
@@ -73,11 +74,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
 
   // Setup socket
   useEffect(() => {
-    const newSocket = io("http://localhost:5050", {
-      transports: ["websocket", "polling"],
-      timeout: 20000,
-      forceNew: true,
-    });
+    const newSocket = io(getSocketUrl(), socketConfig);
 
     newSocket.on("connect", () => {
       console.log("🔗 Connected to WebSocket server");

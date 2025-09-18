@@ -11,20 +11,61 @@ export const guestApiClient: AxiosInstance = axios.create({
   },
 });
 
+// Add request interceptor to include tenant headers
+guestApiClient.interceptors.request.use(
+  (config) => {
+    // Add subdomain information for tenant requests
+    if (typeof window !== "undefined") {
+      const host = window.location.host;
+      const hostParts = host.split(".");
+
+      // Try to get subdomain from localStorage first (for consistency)
+      let subdomain = null;
+      if (typeof window !== "undefined") {
+        subdomain = localStorage.getItem("current_subdomain");
+      }
+
+      // If not in localStorage, detect from host
+      if (!subdomain) {
+        if (hostParts.length >= 3) {
+          // For subdomain.domain.com or subdomain.localhost:3000
+          subdomain = hostParts[0];
+        } else if (hostParts.length === 2 && hostParts[1].includes(":")) {
+          // For subdomain.localhost:3000
+          subdomain = hostParts[0];
+        }
+
+        // Store in localStorage for future requests
+        if (subdomain && typeof window !== "undefined") {
+          localStorage.setItem("current_subdomain", subdomain);
+        }
+      }
+
+      // Always set the tenant subdomain header if we detected one
+      if (
+        subdomain &&
+        subdomain !== "www" &&
+        subdomain !== "app" &&
+        subdomain !== "localhost" &&
+        subdomain !== "127.0.0.1"
+      ) {
+        config.headers["X-Tenant-Subdomain"] = subdomain;
+        console.log("🌐 Guest API Client: Added tenant header", subdomain);
+      }
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Function to get tenant-aware base URL
 export const getTenantApiUrl = (subdomain?: string | null): string => {
-  if (!subdomain) {
-    return API_BASE_URL;
-  }
-
-  // For localhost development
-  if (API_BASE_URL.includes("localhost:5050")) {
-    return `http://${subdomain}.localhost:5050/api`;
-  }
-
-  // For production domains
-  const url = new URL(API_BASE_URL);
-  return `http://${subdomain}.${url.host}/api`;
+  // Always use the same backend URL for all requests
+  // The tenant handling is done via headers, not URL subdomains
+  return API_BASE_URL;
 };
 
 // Create a tenant-specific client
