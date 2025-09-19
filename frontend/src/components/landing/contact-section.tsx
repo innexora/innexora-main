@@ -1,7 +1,17 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Phone, Mail, MapPin, Calendar, ArrowRight, Zap, Shield, Clock, Users } from "lucide-react";
+import {
+  Phone,
+  Mail,
+  MapPin,
+  Calendar,
+  ArrowRight,
+  Zap,
+  Shield,
+  Clock,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +23,7 @@ const contactMethods = [
     description: "Speak with our hotel tech experts",
     value: "+91 98765 43210",
     action: "Call Now",
-    color: "from-blue-500 to-cyan-500"
+    color: "from-blue-500 to-cyan-500",
   },
   {
     icon: Mail,
@@ -21,7 +31,7 @@ const contactMethods = [
     description: "Get detailed information via email",
     value: "hello@innexora.com",
     action: "Send Email",
-    color: "from-purple-500 to-pink-500"
+    color: "from-purple-500 to-pink-500",
   },
   {
     icon: Calendar,
@@ -29,31 +39,31 @@ const contactMethods = [
     description: "See Innexora in action",
     value: "15-minute live demo",
     action: "Schedule Now",
-    color: "from-green-500 to-emerald-500"
-  }
+    color: "from-green-500 to-emerald-500",
+  },
 ];
 
 const benefits = [
   {
     icon: Zap,
     title: "Quick Setup",
-    description: "Get started in under 2 hours"
+    description: "Get started in under 2 hours",
   },
   {
     icon: Shield,
     title: "Secure & Reliable",
-    description: "Enterprise-grade security"
+    description: "Enterprise-grade security",
   },
   {
     icon: Clock,
     title: "24/7 Support",
-    description: "Always here when you need us"
+    description: "Always here when you need us",
   },
   {
     icon: Users,
     title: "Expert Training",
-    description: "Complete staff onboarding included"
-  }
+    description: "Complete staff onboarding included",
+  },
 ];
 
 export function ContactSection() {
@@ -76,7 +86,8 @@ export function ContactSection() {
               Get Started Today
             </h2>
             <p className="text-base text-gray-600 max-w-2xl mx-auto">
-              Join 500+ hotels using Innexora to deliver exceptional guest experiences.
+              Join 500+ hotels using Innexora to deliver exceptional guest
+              experiences.
             </p>
           </motion.div>
 
@@ -113,7 +124,7 @@ export function ContactSection() {
                     />
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -176,17 +187,16 @@ export function ContactSection() {
               Ready to Join 500+ Successful Hotels?
             </h3>
             <p className="text-sm text-gray-300 mb-6 max-w-xl mx-auto">
-              Stop losing money on inefficient operations. Start delivering experiences that guests love.
+              Stop losing money on inefficient operations. Start delivering
+              experiences that guests love.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button
-                className="bg-white text-black hover:bg-gray-100 px-6 py-2 text-sm font-medium rounded-sm"
-              >
+              <Button className="bg-white text-black hover:bg-gray-100 px-6 py-2 text-sm font-medium rounded-sm">
                 Start Free Trial
               </Button>
               <Button
                 variant="outline"
-                className="border border-white text-white hover:bg-white hover:text-black px-6 py-2 text-sm font-medium rounded-sm"
+                className="border border-whit text-black hover:bg-white hover:text-black px-6 py-2 text-sm font-medium rounded-sm"
               >
                 Schedule Demo
               </Button>

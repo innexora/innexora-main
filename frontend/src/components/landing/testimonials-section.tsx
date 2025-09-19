@@ -13,7 +13,7 @@ const testimonials = [
     rating: 5,
     text: "Innexora has revolutionized our guest service. QR-based ordering reduced our reception calls by 85%, and our guest satisfaction scores jumped from 4.2 to 4.8 stars. The AI routing is incredibly smart!",
     results: "85% fewer calls, 4.8★ rating",
-    color: "from-blue-500 to-cyan-500"
+    color: "from-blue-500 to-cyan-500",
   },
   {
     name: "Sarah Mitchell",
@@ -24,7 +24,7 @@ const testimonials = [
     rating: 5,
     text: "The staff efficiency improvement is remarkable. Our housekeeping response time went from 45 minutes to 12 minutes. The real-time notifications and analytics dashboard are game-changers.",
     results: "73% faster response time",
-    color: "from-purple-500 to-pink-500"
+    color: "from-purple-500 to-pink-500",
   },
   {
     name: "Ahmed Al-Rashid",
@@ -35,7 +35,7 @@ const testimonials = [
     rating: 5,
     text: "We saved the equivalent of 3 staff salaries in the first year. The system pays for itself within 2 months. Our revenue increased by 28% due to better service and guest reviews.",
     results: "28% revenue increase",
-    color: "from-orange-500 to-red-500"
+    color: "from-orange-500 to-red-500",
   },
   {
     name: "Maria Rodriguez",
@@ -46,7 +46,7 @@ const testimonials = [
     rating: 5,
     text: "Guests love the instant service requests. No more waiting on hold or walking to reception. Our TripAdvisor reviews improved dramatically, and we're now ranked #1 in our area.",
     results: "#1 ranked hotel locally",
-    color: "from-green-500 to-emerald-500"
+    color: "from-green-500 to-emerald-500",
   },
   {
     name: "David Chen",
@@ -57,7 +57,7 @@ const testimonials = [
     rating: 5,
     text: "The security and data isolation is exceptional. Each property has complete control over their data. Setup took just 2 hours, and staff training was completed in one day.",
     results: "2-hour setup, 1-day training",
-    color: "from-indigo-500 to-blue-500"
+    color: "from-indigo-500 to-blue-500",
   },
   {
     name: "Lisa Thompson",
@@ -68,8 +68,8 @@ const testimonials = [
     rating: 5,
     text: "The analytics insights helped us optimize our service offerings. We identified peak request times and adjusted staffing accordingly. Our operational costs dropped by 22%.",
     results: "22% cost reduction",
-    color: "from-teal-500 to-cyan-500"
-  }
+    color: "from-teal-500 to-cyan-500",
+  },
 ];
 
 const trustedCompanies = [
@@ -80,7 +80,7 @@ const trustedCompanies = [
   "Hyatt Hotels",
   "Radisson Hotel Group",
   "Wyndham Hotels",
-  "Choice Hotels"
+  "Choice Hotels",
 ];
 
 export function TestimonialsSection() {
@@ -89,7 +89,7 @@ export function TestimonialsSection() {
       <div className="container mx-auto px-4">
         <div className="max-w-7xl mx-auto">
           {/* Section Header */}
-          <motion.div
+          {/* <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -103,12 +103,13 @@ export function TestimonialsSection() {
               Trusted by Leading Hotels
             </h2>
             <p className="text-base text-gray-600 max-w-2xl mx-auto">
-              See how hotels worldwide are transforming operations and boosting revenue.
+              See how hotels worldwide are transforming operations and boosting
+              revenue.
             </p>
-          </motion.div>
+          </motion.div> */}
 
           {/* Testimonials Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+          {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
             {testimonials.slice(0, 3).map((testimonial, index) => (
               <motion.div
                 key={index}
@@ -129,14 +130,20 @@ export function TestimonialsSection() {
                     {testimonial.image}
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-900">{testimonial.name}</h4>
-                    <p className="text-xs text-gray-600">{testimonial.position}</p>
-                    <p className="text-xs text-gray-500">{testimonial.company}</p>
+                    <h4 className="text-sm font-semibold text-gray-900">
+                      {testimonial.name}
+                    </h4>
+                    <p className="text-xs text-gray-600">
+                      {testimonial.position}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {testimonial.company}
+                    </p>
                   </div>
                 </div>
               </motion.div>
             ))}
-          </div>
+          </div> */}
 
           {/* Why Hotels Switch Section */}
           <motion.div
@@ -149,25 +156,53 @@ export function TestimonialsSection() {
             <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">
               Why Hotels Switch to Innexora
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Traditional Management</h4>
-                <ul className="space-y-2">
-                  <li className="text-sm text-gray-600">• Manual phone-based requests</li>
-                  <li className="text-sm text-gray-600">• Delayed response times</li>
-                  <li className="text-sm text-gray-600">• High staff costs (₹50,000+/month)</li>
-                  <li className="text-sm text-gray-600">• Poor guest satisfaction</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">With Innexora</h4>
-                <ul className="space-y-2">
-                  <li className="text-sm text-gray-600">• Instant QR-based requests</li>
-                  <li className="text-sm text-gray-600">• AI-powered fast responses</li>
-                  <li className="text-sm text-gray-600">• Low monthly cost (₹15,999/month)</li>
-                  <li className="text-sm text-gray-600">• 5-star guest experiences</li>
-                </ul>
-              </div>
+            <div className="overflow-hidden border border-gray-200 rounded-sm">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-stone-50">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      Traditional Management
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      With Innexora
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  <tr className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Manual phone-based requests
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Instant QR-based requests
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Delayed response times
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      AI-powered fast responses
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      High staff costs (₹50,000+/month)
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Low monthly cost (₹15,999/month)
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Poor guest satisfaction
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      5-star guest experiences
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </motion.div>
         </div>

@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { Building2, Mail, Phone, MapPin } from 'lucide-react';
+import Link from "next/link";
+import { Building2, Mail, Phone, MapPin } from "lucide-react";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -17,13 +17,14 @@ export default function Footer() {
               <span className="text-xl font-semibold text-black">Innexora</span>
             </div>
             <p className="text-sm text-gray-600 mb-4 max-w-md">
-              The modern hotel management platform that transforms guest experiences 
-              and streamlines operations for luxury hotels worldwide.
+              The modern hotel management platform that transforms guest
+              experiences and streamlines operations for luxury hotels
+              worldwide.
             </p>
             <div className="space-y-2">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <Mail className="h-4 w-4" />
-                <span>akarshrajput.01@icloud.com</span>
+                <span>akarshrajput@icloud.com</span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <Phone className="h-4 w-4" />
@@ -41,22 +42,34 @@ export default function Footer() {
             <h3 className="text-sm font-medium text-black mb-4">Product</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="#features" className="text-sm text-gray-600 hover:text-black transition-colors">
+                <Link
+                  href="#features"
+                  className="text-sm text-gray-600 hover:text-black transition-colors"
+                >
                   Features
                 </Link>
               </li>
               <li>
-                <Link href="#pricing" className="text-sm text-gray-600 hover:text-black transition-colors">
+                <Link
+                  href="#pricing"
+                  className="text-sm text-gray-600 hover:text-black transition-colors"
+                >
                   Pricing
                 </Link>
               </li>
               <li>
-                <Link href="#testimonials" className="text-sm text-gray-600 hover:text-black transition-colors">
+                <Link
+                  href="#testimonials"
+                  className="text-sm text-gray-600 hover:text-black transition-colors"
+                >
                   Testimonials
                 </Link>
               </li>
               <li>
-                <Link href="#contact" className="text-sm text-gray-600 hover:text-black transition-colors">
+                <Link
+                  href="#contact"
+                  className="text-sm text-gray-600 hover:text-black transition-colors"
+                >
                   Demo
                 </Link>
               </li>
@@ -68,23 +81,19 @@ export default function Footer() {
             <h3 className="text-sm font-medium text-black mb-4">Company</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/about" className="text-sm text-gray-600 hover:text-black transition-colors">
-                  About Us
-                </Link>
-              </li>
-              <li>
-                <Link href="/careers" className="text-sm text-gray-600 hover:text-black transition-colors">
+                <Link
+                  href="/careers"
+                  className="text-sm text-gray-600 hover:text-black transition-colors"
+                >
                   Careers
                 </Link>
               </li>
               <li>
-                <Link href="/blog" className="text-sm text-gray-600 hover:text-black transition-colors">
+                <Link
+                  href="/blog"
+                  className="text-sm text-gray-600 hover:text-black transition-colors"
+                >
                   Blog
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="text-sm text-gray-600 hover:text-black transition-colors">
-                  Contact
                 </Link>
               </li>
             </ul>
@@ -97,22 +106,22 @@ export default function Footer() {
             <div className="text-sm text-gray-600">
               © {currentYear} Innexora. All rights reserved.
             </div>
-            
+
             <div className="flex items-center space-x-6">
-              <Link 
-                href="/privacy-policy" 
+              <Link
+                href="/privacy"
                 className="text-sm text-gray-600 hover:text-black transition-colors"
               >
                 Privacy Policy
               </Link>
-              <Link 
-                href="/terms-conditions" 
+              <Link
+                href="/terms"
                 className="text-sm text-gray-600 hover:text-black transition-colors"
               >
                 Terms & Conditions
               </Link>
-              <Link 
-                href="/security" 
+              <Link
+                href="/security"
                 className="text-sm text-gray-600 hover:text-black transition-colors"
               >
                 Security

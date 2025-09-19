@@ -98,11 +98,14 @@ export default function DashboardLayout({
                       alt={`${hotel.name || "Hotel"} logo`}
                       width={40}
                       height={40}
-                      className="rounded-sm border aspect-square"
+                      className="rounded-xs border aspect-square"
                     />
                   ) : (
                     <Building2 className="h-6 w-6 text-black dark:text-white" />
                   )}
+                  <p className="text-xs font-bold line-clamp-2">
+                    {hotel?.name}
+                  </p>
                 </div>
                 <Button
                   variant="ghost"

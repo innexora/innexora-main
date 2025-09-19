@@ -4,6 +4,7 @@ import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 import { useState } from "react";
 import { Hotel, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -17,11 +18,11 @@ export function Header() {
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
-      const headerHeight = 64;
+      const headerHeight = 90;
       const elementPosition = element.offsetTop - headerHeight;
       window.scrollTo({
         top: elementPosition,
-        behavior: "smooth"
+        behavior: "smooth",
       });
     }
     setIsMobileMenuOpen(false);
@@ -31,31 +32,44 @@ export function Header() {
     { name: "Features", id: "features" },
     { name: "Testimonials", id: "testimonials" },
     { name: "Pricing", id: "pricing" },
-    { name: "Contact", id: "contact" }
+    { name: "Contact", id: "contact" },
   ];
 
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? "bg-white border-b border-gray-200"
-          : "bg-white"
+        isScrolled ? "bg-white border-b border-gray-200" : "bg-white"
       }`}
     >
+      {" "}
+      <div className="flex justify-center gap-4 items-center bg-stone-50 text-black text-center text-sm py-1">
+        <p>
+          Enjoy a <span className="font-bold">7-day</span> free trial for every
+          new hotel.
+          <span className="hidden md:inline"> No credit card required.</span>
+        </p>
+        <button
+          onClick={() => scrollToSection("contact")}
+          className="text-sm bg-stone-900 text-white cursor-pointer px-2 py-1 rounded-xs"
+        >
+          Click here
+        </button>
+      </div>
       <div className="max-w-7xl mx-auto px-6">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-14">
           {/* Logo */}
-          <div
+          <Link
+            href={"/"}
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => scrollToSection("hero")}
           >
-            <div className="w-8 h-8 rounded-sm bg-black flex items-center justify-center">
+            {/* <div className="w-8 h-8 rounded-sm bg-black flex items-center justify-center">
               <Hotel className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-lg font-semibold text-black">
+            </div> */}
+            <span className="text-lg font-semibold bg-orange-50 text-black border-2 px-2 border-black">
               Innexora
             </span>
-          </div>
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">

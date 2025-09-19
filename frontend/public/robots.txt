@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+
+# Disallow admin and dashboard areas
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /_tenant
+Disallow: /api
+
+# Allow important pages
+Allow: /
+Allow: /security
+Allow: /privacy
+Allow: /terms
+
+# Sitemap
+Sitemap: https://innexora.app/sitemap.xml

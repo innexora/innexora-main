@@ -6,7 +6,7 @@ import { ArrowRight, Play } from "lucide-react";
 
 export function HeroSection() {
   return (
-    <section id="hero" className="pt-24 pb-20 bg-stone-50">
+    <section id="hero" className="pt-30 pb-20 bg-stone-50">
       <div className="max-w-6xl mx-auto px-6">
         <div className="text-center max-w-4xl mx-auto">
           {/* Badge */}
@@ -38,8 +38,9 @@ export function HeroSection() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg text-gray-600 max-w-2xl mx-auto mb-8 leading-relaxed"
           >
-            AI-powered guest interaction, QR-based ordering, and real-time staff notifications. 
-            Complete hotel management solution with secure data isolation.
+            AI-powered guest interaction, QR-based ordering, and real-time staff
+            notifications. Complete hotel management solution with secure data
+            isolation.
           </motion.p>
 
           {/* CTA Buttons */}
@@ -74,13 +75,19 @@ export function HeroSection() {
             className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto"
           >
             <div className="bg-white border border-gray-200 rounded-sm p-4 text-center">
-              <span className="text-sm font-medium text-gray-800">2-Hour Setup</span>
+              <span className="text-sm font-medium text-gray-800">
+                2-Hour Setup
+              </span>
             </div>
             <div className="bg-white border border-gray-200 rounded-sm p-4 text-center">
-              <span className="text-sm font-medium text-gray-800">Secure & Isolated</span>
+              <span className="text-sm font-medium text-gray-800">
+                Secure & Isolated
+              </span>
             </div>
             <div className="bg-white border border-gray-200 rounded-sm p-4 text-center">
-              <span className="text-sm font-medium text-gray-800">85% Efficiency Gain</span>
+              <span className="text-sm font-medium text-gray-800">
+                85% Efficiency Gain
+              </span>
             </div>
           </motion.div>
         </div>
