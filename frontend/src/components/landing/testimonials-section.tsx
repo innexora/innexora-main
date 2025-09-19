@@ -151,7 +151,7 @@ export function TestimonialsSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="bg-white border border-gray-200 rounded-sm p-8"
+            className="bg-white border border-gray-200 rounded-sm p-4"
           >
             <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">
               Why Hotels Switch to Innexora
