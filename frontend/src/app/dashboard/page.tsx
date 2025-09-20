@@ -55,104 +55,59 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    setIsLoading(true);
     fetchData();
   }, []);
 
   const fetchData = async () => {
     try {
-      // Fetch rooms using dashboardApi
+      // Fetch room stats using dedicated stats API
       try {
-        const roomsResponse = await dashboardApi.getRooms();
-        if (roomsResponse.success && Array.isArray(roomsResponse.data)) {
-          const rooms = roomsResponse.data;
-
-          const roomStats = rooms.reduce(
-            (acc: any, room: any) => {
-              acc.totalRooms++;
-              switch (room.status) {
-                case "available":
-                  acc.availableRooms++;
-                  break;
-                case "occupied":
-                  acc.occupiedRooms++;
-                  break;
-                case "maintenance":
-                  acc.maintenanceRooms++;
-                  break;
-                case "cleaning":
-                  acc.cleaningRooms++;
-                  break;
-              }
-              return acc;
-            },
-            {
-              totalRooms: 0,
-              availableRooms: 0,
-              occupiedRooms: 0,
-              maintenanceRooms: 0,
-              cleaningRooms: 0,
-            }
-          );
-
-          const occupancyRate =
-            roomStats.totalRooms > 0
-              ? (roomStats.occupiedRooms / roomStats.totalRooms) * 100
-              : 0;
-
+        const roomStatsResponse = await dashboardApi.getRoomStats();
+        if (roomStatsResponse.success && roomStatsResponse.data) {
+          const roomStats = roomStatsResponse.data as any;
           setStats((prev) => ({
             ...prev,
-            ...roomStats,
-            occupancyRate: Math.round(occupancyRate),
+            totalRooms: roomStats.totalRooms || 0,
+            availableRooms: roomStats.availableRooms || 0,
+            occupiedRooms: roomStats.occupiedRooms || 0,
+            maintenanceRooms: roomStats.maintenanceRooms || 0,
+            cleaningRooms: roomStats.cleaningRooms || 0,
+            occupancyRate: roomStats.occupancyRate || 0,
           }));
         }
       } catch (error) {
-        console.error("Failed to fetch rooms:", error);
+        console.error("Failed to fetch room stats:", error);
       }
 
-      // Fetch guests using dashboardApi
+      // Fetch guest stats using dedicated stats API
       try {
-        const guestsResponse = await dashboardApi.getGuests();
-        if (guestsResponse.success && Array.isArray(guestsResponse.data)) {
-          const guests = guestsResponse.data;
-
-          const guestStats = guests.reduce(
-            (acc: any, guest: any) => {
-              acc.totalGuests++;
-              if (guest.status === "checked_in") {
-                acc.checkedInGuests++;
-              }
-              return acc;
-            },
-            { totalGuests: 0, checkedInGuests: 0 }
-          );
-
+        const guestStatsResponse = await dashboardApi.getGuestStats();
+        if (guestStatsResponse.success && guestStatsResponse.data) {
+          const guestStats = guestStatsResponse.data as any;
           setStats((prev) => ({
             ...prev,
-            ...guestStats,
+            totalGuests: guestStats.totalGuests || 0,
+            checkedInGuests: guestStats.activeGuests || 0,
           }));
         }
       } catch (error) {
-        console.error("Failed to fetch guests:", error);
+        console.error("Failed to fetch guest stats:", error);
       }
 
-      // Fetch tickets using dashboardApi
+      // Fetch ticket stats using dedicated stats API
       try {
-        const ticketsResponse = await dashboardApi.getTickets();
-        if (ticketsResponse.success && Array.isArray(ticketsResponse.data)) {
-          const tickets = ticketsResponse.data;
-          const ticketStats = {
-            totalTickets: tickets.length,
-            pendingTickets: tickets.filter((t: any) => t.status === "raised")
-              .length,
-          };
-
+        const ticketStatsResponse = await dashboardApi.getTicketStats();
+        if (ticketStatsResponse.success && ticketStatsResponse.data) {
+          const ticketStats = ticketStatsResponse.data as any;
           setStats((prev) => ({
             ...prev,
-            ...ticketStats,
+            totalTickets: ticketStats.totalTickets || 0,
+            pendingTickets: ticketStats.pendingTickets || 0,
           }));
         }
       } catch (error) {
-        console.error("Failed to fetch tickets:", error);
+        console.error("Failed to fetch ticket stats:", error);
       }
     } catch (error) {
       console.error("Failed to fetch data:", error);
@@ -193,7 +148,7 @@ export default function DashboardPage() {
             <TrendingUp className="h-4 w-4 text-black dark:text-white opacity-70" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-semibold text-black dark:text-white">{`${stats.occupancyRate}%`}</div>
+            <div className="text-xl font-semibold text-black dark:text-white">{`${stats.occupancyRate}`}</div>
             <p className="text-xs text-black dark:text-white opacity-70">
               {isLoading
                 ? "Loading..."

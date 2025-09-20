@@ -13,7 +13,10 @@ class ApiClient {
     }
 
     // If we have a production API URL set, use it
-    if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes("localhost")) {
+    if (
+      process.env.NEXT_PUBLIC_API_URL &&
+      !process.env.NEXT_PUBLIC_API_URL.includes("localhost")
+    ) {
       return process.env.NEXT_PUBLIC_API_URL;
     }
 
@@ -35,7 +38,7 @@ class ApiClient {
     }
 
     // Fallback to main domain or localhost for development
-    const baseUrl = host.includes("localhost") 
+    const baseUrl = host.includes("localhost")
       ? `${protocol}//${host}/api`
       : process.env.NEXT_PUBLIC_API_URL || `${protocol}//${host}/api`;
     console.log("🌐 API Client: Main domain URL constructed:", baseUrl);
@@ -268,5 +271,22 @@ export const dashboardApi = {
   getRooms: () => apiClient.get("/rooms"),
   getGuests: () => apiClient.get("/guests"),
   getTickets: () => apiClient.get("/tickets"),
+  getRoomStats: () => apiClient.get("/rooms/stats"),
   getGuestStats: () => apiClient.get("/guests/stats"),
+  getFoodStats: () => apiClient.get("/food/stats"),
+  getTicketStats: () => apiClient.get("/tickets/stats"),
+  getOrderStats: () => apiClient.get("/orders/stats"),
+};
+
+// Order API functions
+export const orderApi = {
+  updateOrderStatus: (
+    id: string,
+    statusData: {
+      status: string;
+      preparedBy?: string;
+      deliveredBy?: string;
+      cancellationReason?: string;
+    }
+  ) => apiClient.put(`/orders/${id}/status`, statusData),
 };

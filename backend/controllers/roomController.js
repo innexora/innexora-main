@@ -2,6 +2,71 @@ const Room = require("../models/Room");
 const { body, validationResult } = require("express-validator");
 const ErrorResponse = require("../utils/errorResponse");
 
+// @desc    Get room statistics
+// @route   GET /api/rooms/stats
+// @access  Private/Manager
+exports.getRoomStats = async (req, res, next) => {
+  try {
+    if (!req.tenantModels || !req.tenantModels.Room) {
+      return res.status(500).json({
+        success: false,
+        error: "Tenant database not properly initialized",
+      });
+    }
+    const Room = req.tenantModels.Room;
+
+    // Get stats using aggregation for efficiency
+    const stats = await Room.aggregate([
+      { $match: { isActive: true } },
+      {
+        $group: {
+          _id: null,
+          totalRooms: { $sum: 1 },
+          availableRooms: {
+            $sum: { $cond: [{ $eq: ["$status", "available"] }, 1, 0] },
+          },
+          occupiedRooms: {
+            $sum: { $cond: [{ $eq: ["$status", "occupied"] }, 1, 0] },
+          },
+          maintenanceRooms: {
+            $sum: { $cond: [{ $eq: ["$status", "maintenance"] }, 1, 0] },
+          },
+          avgCapacity: { $avg: "$capacity" },
+        },
+      },
+    ]);
+
+    const result = stats[0] || {
+      totalRooms: 0,
+      availableRooms: 0,
+      occupiedRooms: 0,
+      maintenanceRooms: 0,
+      avgCapacity: 0,
+    };
+
+    // Calculate occupancy rate
+    const occupancyRate =
+      result.totalRooms > 0
+        ? Math.round((result.occupiedRooms / result.totalRooms) * 100)
+        : 0;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalRooms: result.totalRooms,
+        availableRooms: result.availableRooms,
+        occupiedRooms: result.occupiedRooms,
+        maintenanceRooms: result.maintenanceRooms,
+        occupancyRate: `${occupancyRate}%`,
+        avgCapacity: Math.round(result.avgCapacity || 0),
+      },
+    });
+  } catch (error) {
+    console.error("Get room stats error:", error.message);
+    next(new ErrorResponse("Server error", 500));
+  }
+};
+
 // @desc    Get all rooms for the manager's hotel
 // @route   GET /api/rooms
 // @access  Private/Manager
@@ -19,13 +84,44 @@ exports.getRooms = async (req, res, next) => {
     }
     const Room = req.tenantModels.Room;
 
+    // Extract pagination and filtering parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const search = req.query.search || "";
+    const status = req.query.status || "all";
+    const type = req.query.type || "all";
+
+    // Build query object
+    const query = { isActive: true };
+
+    // Add search functionality
+    if (search) {
+      query.$or = [
+        { number: { $regex: search, $options: "i" } },
+        { type: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Add status filter
+    if (status !== "all") {
+      query.status = status;
+    }
+
+    // Add type filter
+    if (type !== "all") {
+      query.type = type;
+    }
+
     try {
       // Add diagnostics for room collection
       const conn = req.tenantDb;
       if (conn && conn.db) {
-        const dbName = conn.name || (conn.db.databaseName || "unknown");
+        const dbName = conn.name || conn.db.databaseName || "unknown";
         const rawCount = await conn.db.collection("rooms").countDocuments();
-        console.log(`Tenant DB: ${dbName} | rooms collection count: ${rawCount}`);
+        console.log(
+          `Tenant DB: ${dbName} | rooms collection count: ${rawCount}`
+        );
       }
     } catch (diagErr) {
       console.warn("Diagnostics error (room count):", diagErr.message);
@@ -33,32 +129,57 @@ exports.getRooms = async (req, res, next) => {
 
     // Add timeout for room queries
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Room query timeout')), 5000);
+      setTimeout(() => reject(new Error("Room query timeout")), 5000);
     });
-    
-    const roomsPromise = Room.find({ isActive: true })
-      .select("-__v -createdAt -updatedAt")
-      .lean();
 
-    const rooms = await Promise.race([roomsPromise, timeoutPromise]);
+    // Calculate skip value for pagination
+    const skip = (page - 1) * limit;
 
-    console.log(`Found ${rooms.length} rooms`);
+    // Execute count and find queries in parallel
+    const [total, rooms] = await Promise.race([
+      Promise.all([
+        Room.countDocuments(query),
+        Room.find(query)
+          .select("-__v -createdAt -updatedAt")
+          .sort({ number: 1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+      ]),
+      timeoutPromise,
+    ]);
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    console.log(`Found ${rooms.length} rooms (page ${page} of ${totalPages})`);
 
     res.status(200).json({
       success: true,
       count: rooms.length,
+      total: total,
       data: rooms,
+      pagination: {
+        current: page,
+        pages: totalPages,
+        total: total,
+        limit: limit,
+        hasNext: hasNextPage,
+        hasPrev: hasPrevPage,
+      },
     });
   } catch (error) {
     console.error("Get rooms error:", error.message);
-    
-    if (error.message.includes('timeout')) {
+
+    if (error.message.includes("timeout")) {
       return res.status(503).json({
         success: false,
         error: "Database temporarily unavailable",
       });
     }
-    
+
     next(new ErrorResponse("Server error", 500));
   }
 };
@@ -106,8 +227,6 @@ exports.getRoom = async (req, res, next) => {
 // @access  Private/Manager
 exports.createRoom = async (req, res, next) => {
   try {
-    // Check for duplicate room number
-
     // Use tenant models - must exist for tenant domains
     if (!req.tenantModels || !req.tenantModels.Room) {
       console.error("Tenant models not available:", req.tenantModels);
@@ -118,30 +237,65 @@ exports.createRoom = async (req, res, next) => {
     }
     const Room = req.tenantModels.Room;
 
-    const roomExists = await Room.findOne({
+    // First check if an active room with this number already exists
+    const activeRoomExists = await Room.findOne({
       number: req.body.number,
       isActive: true,
     });
 
-    if (roomExists) {
+    if (activeRoomExists) {
       return res.status(400).json({
         success: false,
-        message: `Room with number ${req.body.number} already exists`,
+        message: `Room with number ${req.body.number} already exists and is active`,
       });
     }
 
-    // Prepare room data
+    // Check if an inactive room with this number exists
+    const inactiveRoom = await Room.findOne({
+      number: req.body.number,
+      isActive: false,
+    });
+
+    if (inactiveRoom) {
+      // Reactivate the existing room with new data
+      const updatedRoomData = {
+        ...req.body,
+        price: Number(req.body.price) || 0,
+        isActive: true,
+        updatedAt: new Date(),
+      };
+
+      // Update the inactive room with new data
+      Object.keys(updatedRoomData).forEach((key) => {
+        if (updatedRoomData[key] !== undefined) {
+          inactiveRoom[key] = updatedRoomData[key];
+        }
+      });
+
+      const reactivatedRoom = await inactiveRoom.save();
+
+      return res.status(200).json({
+        success: true,
+        message: `Room ${req.body.number} has been reactivated with updated information`,
+        data: reactivatedRoom,
+        reactivated: true,
+      });
+    }
+
+    // If no room exists (active or inactive), create a new one
     const roomData = {
       ...req.body,
-      // Ensure price is a number
       price: Number(req.body.price) || 0,
+      isActive: true,
     };
 
     const room = await Room.create(roomData);
 
     res.status(201).json({
       success: true,
+      message: `Room ${req.body.number} created successfully`,
       data: room,
+      reactivated: false,
     });
   } catch (error) {
     console.error("Create room error:", error);
@@ -183,17 +337,33 @@ exports.updateRoom = async (req, res, next) => {
 
     // Check for duplicate room number
     if (req.body.number && req.body.number !== room.number) {
-      const roomExists = await Room.findOne({
+      // First check if an active room with this number exists
+      const activeRoomExists = await Room.findOne({
         number: req.body.number,
         isActive: true,
         _id: { $ne: req.params.id },
       });
-      console.log("Duplicate check - room exists:", roomExists);
 
-      if (roomExists) {
+      if (activeRoomExists) {
         return next(
           new ErrorResponse(
-            `Room with number ${req.body.number} already exists`,
+            `Room with number ${req.body.number} already exists and is active`,
+            400
+          )
+        );
+      }
+
+      // Check if an inactive room with this number exists
+      const inactiveRoom = await Room.findOne({
+        number: req.body.number,
+        isActive: false,
+        _id: { $ne: req.params.id },
+      });
+
+      if (inactiveRoom) {
+        return next(
+          new ErrorResponse(
+            `Room with number ${req.body.number} exists but is inactive. Cannot change room number to an existing room number. Please use a different number or reactivate the existing room.`,
             400
           )
         );
@@ -201,7 +371,15 @@ exports.updateRoom = async (req, res, next) => {
     }
 
     // Update room fields
-    const fieldsToUpdate = ["number", "type", "floor", "status"];
+    const fieldsToUpdate = [
+      "number",
+      "type",
+      "floor",
+      "status",
+      "price",
+      "capacity",
+      "description",
+    ];
     fieldsToUpdate.forEach((field) => {
       if (req.body[field] !== undefined) {
         room[field] = req.body[field];
@@ -245,19 +423,56 @@ exports.deleteRoom = async (req, res, next) => {
       );
     }
 
-    // Check for active tickets
-    const activeTickets = await Ticket.countDocuments({
+    // Check for active tickets using tenant model
+    const Ticket = req.tenantModels.Ticket;
+    const activeTickets = await Ticket.find({
       room: room._id,
       status: { $in: ["raised", "in_progress"] },
-    });
+    })
+      .select("_id title status priority createdAt")
+      .limit(5);
 
-    if (activeTickets > 0) {
-      return next(
-        new ErrorResponse(
+    // Check for active guests in the room
+    const Guest = req.tenantModels.Guest;
+    const activeGuests = await Guest.find({
+      room: room._id,
+      status: { $in: ["checked_in", "active"] },
+    })
+      .select("_id name checkInDate status")
+      .limit(3);
+
+    // Check for active guests first - always block deletion if guests are present
+    if (activeGuests.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Cannot delete room with active guests. Please check out all guests first.",
+        activeGuests: activeGuests,
+        totalActiveGuests: activeGuests.length,
+        room: {
+          id: room._id,
+          number: room.number,
+          type: room.type,
+        },
+        canForceDelete: false,
+      });
+    }
+
+    // Check for active tickets - always block deletion if tickets are present
+    if (activeTickets.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message:
           "Cannot delete room with active tickets. Please resolve all tickets first.",
-          400
-        )
-      );
+        activeTickets: activeTickets,
+        totalActiveTickets: activeTickets.length,
+        room: {
+          id: room._id,
+          number: room.number,
+          type: room.type,
+        },
+        canForceDelete: false,
+      });
     }
 
     // Soft delete

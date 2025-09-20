@@ -23,6 +23,7 @@ const orderRoutes = require("./routes/orderRoutes");
 const billRoutes = require("./routes/billRoutes");
 const tenantRoutes = require("./routes/tenantRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 // Import middleware
 const { errorHandler } = require("./middleware/errorMiddleware");
@@ -149,6 +150,7 @@ app.use("/api/guests", guestRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/bills", billRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/users", userRoutes);
 
 // Backend only serves API routes - frontend is deployed separately
 

@@ -190,7 +190,7 @@ export function TestimonialsSection() {
                       High staff costs (₹50,000+/month)
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      Low monthly cost (₹15,999/month)
+                      Low monthly cost (₹7,999/month)
                     </td>
                   </tr>
                   <tr className="hover:bg-gray-50 transition-colors">

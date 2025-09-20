@@ -4,10 +4,8 @@ const authController = require("../controllers/authController");
 const { protect } = require("../middleware/authMiddleware");
 const { requireTenant } = require("../middleware/tenantMiddleware");
 
-// @route   POST /api/auth/register
-// @desc    Register a new user (manager/staff)
-// @access  Public (Tenant domain only)
-router.post("/register", requireTenant, authController.register);
+// Registration disabled - Admin creates users via admin panel
+// router.post("/register", requireTenant, authController.register);
 
 // @route   POST /api/auth/login
 // @desc    Login user & get token

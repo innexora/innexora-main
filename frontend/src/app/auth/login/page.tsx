@@ -109,7 +109,7 @@ export default function LoginPage() {
                 alt={`${hotel.name} logo`}
                 width={80}
                 height={80}
-                className="rounded-lg"
+                className="rounded-sm"
               />
             </div>
           ) : (
@@ -120,14 +120,16 @@ export default function LoginPage() {
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-bold text-black">{hotel.name}</h1>
-            <p className="text-gray-600">Management Portal</p>
+            <h1 className="text-xl font-bold text-black">{hotel.name}</h1>
+            <p className="text-gray-600 text-sm">Management Portal</p>
           </div>
         </div>
 
         <Card className="w-full bg-white border border-gray-200 rounded-sm shadow-none">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-black">Welcome back</CardTitle>
+            <CardTitle className="text-2xl font-bold text-black">
+              Welcome back
+            </CardTitle>
             <CardDescription className="text-gray-600">
               Sign in to access your hotel management dashboard
             </CardDescription>
@@ -180,7 +182,11 @@ export default function LoginPage() {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full bg-black text-white hover:bg-gray-800 rounded-sm" disabled={isLoading}>
+                <Button
+                  type="submit"
+                  className="w-full bg-black text-white hover:bg-gray-800 rounded-sm"
+                  disabled={isLoading}
+                >
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -193,13 +199,7 @@ export default function LoginPage() {
               </form>
             </Form>
             <div className="mt-4 text-center text-sm">
-              Don&apos;t have an account?{" "}
-              <Link
-                href="/auth/register"
-                className="text-gray-700 hover:text-black hover:underline"
-              >
-                Register here
-              </Link>
+              Don&apos;t have an account? Ask your hotel administrator.
             </div>
           </CardContent>
         </Card>

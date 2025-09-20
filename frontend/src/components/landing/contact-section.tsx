@@ -86,7 +86,7 @@ export function ContactSection() {
               Get Started Today
             </h2>
             <p className="text-base text-gray-600 max-w-2xl mx-auto">
-              Join 500+ hotels using Innexora to deliver exceptional guest
+              Join hotels using Innexora to deliver exceptional guest
               experiences.
             </p>
           </motion.div>
@@ -184,7 +184,7 @@ export function ContactSection() {
             className="text-center bg-black rounded-sm p-8 text-white"
           >
             <h3 className="text-2xl font-bold mb-3">
-              Ready to Join 500+ Successful Hotels?
+              Ready to Join Successful Hotels?
             </h3>
             <p className="text-sm text-gray-300 mb-6 max-w-xl mx-auto">
               Stop losing money on inefficient operations. Start delivering

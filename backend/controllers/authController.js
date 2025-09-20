@@ -30,59 +30,16 @@ const sendTokenResponse = (user, statusCode, res) => {
     });
 };
 
-// @desc    Register a new user
+// @desc    Register a new user (DISABLED - Only admins can create users)
 // @route   POST /api/auth/register
-// @access  Public (Tenant domain only)
+// @access  Private (Admin only through admin panel)
 exports.register = async (req, res) => {
-  try {
-    // Check if this is a tenant domain
-    if (!req.tenantModels || !req.hotel) {
-      return res.status(403).json({
-        success: false,
-        message: "Registration is only available for hotel domains",
-      });
-    }
-
-    const { name, email, password, role = "manager" } = req.body;
-
-    // Validate input
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide name, email, and password",
-      });
-    }
-
-    // Use tenant User model
-    const User = req.tenantModels.User;
-
-    // Check if user already exists in tenant database
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: "User already exists with this email",
-      });
-    }
-
-    // Create user with hotel name from tenant context
-    const user = await User.create({
-      name,
-      email,
-      password,
-      role,
-      hotelName: req.hotel.name,
-    });
-
-    sendTokenResponse(user, 201, res);
-  } catch (err) {
-    console.error("Registration error:", err);
-    res.status(500).json({
-      success: false,
-      message: "Server error during registration",
-      error: err.message,
-    });
-  }
+  return res.status(403).json({
+    success: false,
+    message:
+      "Public registration is disabled. Contact your hotel administrator to create an account.",
+    code: "REGISTRATION_DISABLED",
+  });
 };
 
 // @desc    Login user

@@ -4,6 +4,98 @@ const Bill = require("../models/Bill");
 const { body, validationResult } = require("express-validator");
 const ErrorResponse = require("../utils/errorResponse");
 
+// @desc    Get guest statistics
+// @route   GET /api/guests/stats
+// @access  Private/Manager
+exports.getGuestStats = async (req, res, next) => {
+  try {
+    if (!req.tenantModels || !req.tenantModels.Guest) {
+      return res.status(500).json({
+        success: false,
+        error: "Tenant database not properly initialized",
+      });
+    }
+
+    const Guest = req.tenantModels.Guest;
+
+    // Get current date for today's check-ins
+    const today = new Date();
+    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+
+    // Get stats using aggregation for efficiency
+    const stats = await Guest.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalGuests: { $sum: 1 },
+          checkedInGuests: {
+            $sum: { $cond: [{ $eq: ["$status", "checked_in"] }, 1, 0] },
+          },
+          checkedOutGuests: {
+            $sum: { $cond: [{ $eq: ["$status", "checked_out"] }, 1, 0] },
+          },
+          checkedInToday: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$status", "checked_in"] },
+                    { $gte: ["$checkInDate", startOfDay] },
+                    { $lte: ["$checkInDate", endOfDay] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+          checkingOutToday: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$status", "checked_in"] },
+                    { $gte: ["$checkOutDate", startOfDay] },
+                    { $lte: ["$checkOutDate", endOfDay] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+          avgStayDuration: { $avg: "$stayDuration" },
+        },
+      },
+    ]);
+
+    const result = stats[0] || {
+      totalGuests: 0,
+      checkedInGuests: 0,
+      checkedOutGuests: 0,
+      checkedInToday: 0,
+      checkingOutToday: 0,
+      avgStayDuration: 0,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalGuests: result.totalGuests,
+        activeGuests: result.checkedInGuests,
+        checkedInToday: result.checkedInToday,
+        checkingOutToday: result.checkingOutToday,
+        avgStayDuration: Math.round(result.avgStayDuration || 0),
+        checkedOutTotal: result.checkedOutGuests,
+      },
+    });
+  } catch (error) {
+    console.error("Get guest stats error:", error);
+    next(new ErrorResponse("Server error", 500));
+  }
+};
+
 // @desc    Get guest by room access ID (Public route for guest chat)
 // @route   GET /api/guests/room-access/:roomAccessId
 // @access  Public
@@ -33,11 +125,14 @@ exports.getGuestByRoomAccessId = async (req, res, next) => {
     console.log(`Fetching guest info for room access ID: ${roomAccessId}`);
 
     // Find the room by access ID
-    const room = await Room.findOne({ roomAccessId: roomAccessId });
+    const room = await Room.findOne({
+      roomAccessId: roomAccessId,
+      isActive: true,
+    });
     if (!room) {
       return res.status(404).json({
         success: false,
-        message: "Invalid room access code",
+        message: "Invalid room access code or room inactive",
       });
     }
 
@@ -54,7 +149,7 @@ exports.getGuestByRoomAccessId = async (req, res, next) => {
         number: room.number,
         type: room.type,
         floor: room.floor,
-        price: room.price
+        price: room.price,
       };
     }
 
@@ -114,11 +209,11 @@ exports.getGuestByRoom = async (req, res, next) => {
     const Guest = req.tenantModels.Guest;
 
     // Find the room first
-    const room = await Room.findOne({ number: roomNumber });
+    const room = await Room.findOne({ number: roomNumber, isActive: true });
     if (!room) {
       return res.status(404).json({
         success: false,
-        message: "Room not found",
+        message: "Room not found or inactive",
       });
     }
 
@@ -135,7 +230,7 @@ exports.getGuestByRoom = async (req, res, next) => {
         number: room.number,
         type: room.type,
         floor: room.floor,
-        price: room.price
+        price: room.price,
       };
     }
 
@@ -161,54 +256,28 @@ exports.getGuestByRoom = async (req, res, next) => {
   }
 };
 
-// @desc    Get all guests
+// @desc    Get all guests for a hotel
 // @route   GET /api/guests
 // @access  Private/Manager
 exports.getGuests = async (req, res, next) => {
   try {
-    console.log(
-      `Fetching all guests for manager: ${req.user?.email || "unknown"}`
-    );
-    const { status, roomNumber, search } = req.query;
-
-    // Use tenant models - must exist for tenant domains
     if (!req.tenantModels || !req.tenantModels.Guest) {
-      console.error("Tenant models not available:", req.tenantModels);
       return res.status(500).json({
         success: false,
         error: "Tenant database not properly initialized",
       });
     }
+
     const Guest = req.tenantModels.Guest;
-    try {
-      // Extra diagnostics: which DB are we hitting and how many documents exist
-      const conn = req.tenantDb;
-      if (conn && conn.db) {
-        const dbName = conn.name || conn.db.databaseName || "unknown";
-        const rawCount = await conn.db.collection("guests").countDocuments();
-        console.log(
-          `Tenant DB: ${dbName} | guests collection count: ${rawCount}`
-        );
-      } else {
-        console.log("Tenant DB connection not available for diagnostics");
-      }
-    } catch (diagErr) {
-      console.warn("Diagnostics error (guest count):", diagErr.message);
-    }
 
-    // Build query - default to show only checked-in guests
+    // Extract pagination and filtering parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const search = req.query.search || "";
+    const status = req.query.status || "all";
+
+    // Build query object
     const query = {};
-
-    // If no status filter is provided, default to checked-in guests only
-    if (status) {
-      query.status = status;
-    } else {
-      query.status = "checked_in"; // Default to only show active guests
-    }
-    
-    if (roomNumber) query.roomNumber = roomNumber;
-
-    console.log("Query parameters:", { query, status, roomNumber, search });
 
     // Add search functionality
     if (search) {
@@ -216,91 +285,50 @@ exports.getGuests = async (req, res, next) => {
         { name: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
         { phone: { $regex: search, $options: "i" } },
-        { "room.number": { $regex: search, $options: "i" } },
+        { idNumber: { $regex: search, $options: "i" } },
       ];
     }
 
-    // Get pagination parameters
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 100; // Increased limit to ensure we get all guests
-    const skip = (page - 1) * limit;
-
-    // Get total count for pagination
-    const total = await Guest.countDocuments(query);
-
-    console.log(`Found ${total} guests matching query`);
-
-    // Find all guests without population to avoid timeout issues
-    const guests = await Guest.find(query)
-      .sort({ checkInDate: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(); // Convert to plain JavaScript objects
-
-    // Manually populate room data for each guest to avoid timeout issues
-    const Room = req.tenantModels.Room;
-    for (let guest of guests) {
-      if (guest.room) {
-        try {
-          const room = await Room.findById(guest.room).select("number type floor price").lean();
-          if (room) {
-            guest.room = room;
-          } else {
-            // Fallback room data
-            guest.room = {
-              _id: guest.room,
-              number: guest.roomNumber || "N/A",
-              type: "Unknown",
-              floor: "N/A",
-              price: 0,
-            };
-          }
-        } catch (roomError) {
-          console.warn(`Failed to fetch room data for guest ${guest._id}:`, roomError.message);
-          // Fallback room data
-          guest.room = {
-            _id: guest.room,
-            number: guest.roomNumber || "N/A",
-            type: "Unknown",
-            floor: "N/A",
-            price: 0,
-          };
-        }
-      }
+    // Add status filter
+    if (status !== "all") {
+      query.status = status;
     }
 
-    // Calculate stay duration for each guest
-    const guestsWithDuration = guests.map((guest) => {
-      const checkInDate = new Date(guest.checkInDate);
-      const checkOutDate = new Date(guest.checkOutDate);
-      const stayDuration = Math.ceil(
-        (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)
-      );
+    // Calculate skip value for pagination
+    const skip = (page - 1) * limit;
 
-      return {
-        ...guest,
-        stayDuration,
-        // Ensure room data is properly formatted
-        room: guest.room || {
-          _id: guest.room, // In case population didn't work, keep the original ID
-          number: guest.roomNumber || "N/A",
-          type: "Unknown",
-          floor: "N/A",
-          price: 0,
-        },
-      };
-    });
+    // Execute count and find queries in parallel
+    const [total, guests] = await Promise.all([
+      Guest.countDocuments(query),
+      Guest.find(query)
+        .select("-__v")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
 
-    console.log(`Returning ${guestsWithDuration.length} guests with room data`);
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    console.log(
+      `Found ${guests.length} guests (page ${page} of ${totalPages})`
+    );
 
     res.status(200).json({
       success: true,
-      data: guestsWithDuration,
+      count: guests.length,
+      total: total,
+      data: guests,
       pagination: {
-        total,
-        pages: Math.ceil(total / limit),
         current: page,
-        limit,
+        pages: totalPages,
+        total: total,
+        limit: limit,
+        hasNext: hasNextPage,
+        hasPrev: hasPrevPage,
       },
     });
   } catch (error) {
@@ -468,7 +496,7 @@ exports.checkInGuest = async (req, res, next) => {
       type: room.type,
       floor: room.floor,
       price: room.price,
-      amenities: room.amenities || []
+      amenities: room.amenities || [],
     };
 
     res.status(201).json({
@@ -555,8 +583,8 @@ exports.checkoutGuest = async (req, res, next) => {
       // Find active bill for the guest using tenant models
       const bill = await Bill.findOne({
         guest: guest._id,
-        status: { $in: ['active', 'partially_paid'] },
-        isGuestCheckedOut: false
+        status: { $in: ["active", "partially_paid"] },
+        isGuestCheckedOut: false,
       });
 
       if (bill && bill.balanceAmount > 0) {
@@ -568,12 +596,14 @@ exports.checkoutGuest = async (req, res, next) => {
             billNumber: bill.billNumber,
             totalAmount: bill.totalAmount,
             paidAmount: bill.paidAmount,
-            balanceAmount: bill.balanceAmount
-          }
+            balanceAmount: bill.balanceAmount,
+          },
         });
       }
 
-      console.log(`✅ Bill validation passed for guest ${guest.name} - ${bill ? `Bill ${bill.billNumber} is fully paid` : 'No active bill found'}`);
+      console.log(
+        `✅ Bill validation passed for guest ${guest.name} - ${bill ? `Bill ${bill.billNumber} is fully paid` : "No active bill found"}`
+      );
     } catch (billError) {
       console.error("Error checking bill status:", billError);
       return res.status(500).json({
@@ -625,12 +655,17 @@ exports.checkoutGuest = async (req, res, next) => {
     // Manually populate room data to avoid populate errors
     if (guest && guest.room) {
       try {
-        const room = await Room.findById(guest.room).select("number type floor").lean();
+        const room = await Room.findById(guest.room)
+          .select("number type floor")
+          .lean();
         if (room) {
           guest.room = room;
         }
       } catch (roomError) {
-        console.warn("Failed to populate room data for checkout:", roomError.message);
+        console.warn(
+          "Failed to populate room data for checkout:",
+          roomError.message
+        );
       }
     }
 
@@ -678,11 +713,17 @@ exports.updateGuest = async (req, res, next) => {
       );
     }
 
-    // If updating room, check availability
+    // If updating room, check availability and if room is active
     if (req.body.room && req.body.room !== guest.room.toString()) {
-      const newRoom = await Room.findById(req.body.room);
+      const newRoom = await Room.findOne({
+        _id: req.body.room,
+        isActive: true,
+      });
+
       if (!newRoom) {
-        return next(new ErrorResponse("New room not found", 404));
+        return next(
+          new ErrorResponse("New room not found or is no longer available", 404)
+        );
       }
 
       if (newRoom.status !== "available") {
@@ -715,7 +756,9 @@ exports.updateGuest = async (req, res, next) => {
     // Manually populate room data to avoid timeout issues
     if (guest && guest.room) {
       try {
-        const room = await Room.findById(guest.room).select("number type floor price").lean();
+        const room = await Room.findById(guest.room)
+          .select("number type floor price")
+          .lean();
         if (room) {
           guest.room = room;
         }
@@ -828,71 +871,6 @@ exports.getGuestByRoom = async (req, res, next) => {
   }
 };
 
-// @desc    Get guest statistics
-// @route   GET /api/guests/stats
-// @access  Private/Manager
-exports.getGuestStats = async (req, res, next) => {
-  try {
-    // Use tenant models - must exist for tenant domains
-    if (!req.tenantModels || !req.tenantModels.Room) {
-      console.error("Tenant models not available:", req.tenantModels);
-      return res.status(500).json({
-        success: false,
-        error: "Tenant database not properly initialized",
-      });
-    }
-    const Room = req.tenantModels.Room;
-    // Use tenant models - must exist for tenant domains
-    if (!req.tenantModels || !req.tenantModels.Guest) {
-      console.error("Tenant models not available:", req.tenantModels);
-      return res.status(500).json({
-        success: false,
-        error: "Tenant database not properly initialized",
-      });
-    }
-    const Guest = req.tenantModels.Guest;
-    const stats = await Guest.aggregate([
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-
-    const formattedStats = stats.reduce(
-      (acc, curr) => {
-        acc[curr._id] = curr.count;
-        return acc;
-      },
-      { checked_in: 0, checked_out: 0, cancelled: 0, no_show: 0 }
-    );
-
-    // Get current occupancy
-    const occupiedRooms = await Room.countDocuments({
-      status: "occupied",
-    });
-
-    const totalRooms = await Room.countDocuments({
-      isActive: true,
-    });
-
-    res.status(200).json({
-      success: true,
-      data: {
-        ...formattedStats,
-        occupiedRooms,
-        totalRooms,
-        occupancyRate:
-          totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0,
-      },
-    });
-  } catch (error) {
-    console.error("Get guest stats error:", error);
-    next(new ErrorResponse("Server error", 500));
-  }
-};
-
 // @desc    Get active guests
 // @route   GET /api/guests/active
 // @access  Private/Manager
@@ -907,7 +885,33 @@ exports.getActiveGuests = async (req, res, next) => {
       });
     }
     const Guest = req.tenantModels.Guest;
-    const guests = await Guest.getActiveGuests();
+    const Room = req.tenantModels.Room;
+    const { search } = req.query;
+
+    // Build query for checked-in guests
+    let query = { status: "checked_in" };
+
+    // If search term is provided, we need to handle room number search specially
+    if (search) {
+      // First try to find rooms that match the search term
+      const matchingRooms = await Room.find({
+        number: { $regex: search, $options: "i" },
+      }).select("_id");
+
+      const roomIds = matchingRooms.map((room) => room._id);
+
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { phone: { $regex: search, $options: "i" } },
+        { room: { $in: roomIds } }, // Search by room IDs that match the number
+      ];
+    }
+
+    // Find active guests with optional search
+    const guests = await Guest.find(query)
+      .populate("room", "number type floor status price")
+      .sort({ checkInDate: -1 });
 
     res.status(200).json({
       success: true,
@@ -1015,10 +1019,16 @@ exports.createGuest = async (req, res, next) => {
     }
     const Guest = req.tenantModels.Guest;
 
-    // Check if room is available
-    const room = await Room.findById(req.body.room);
+    // Check if room is available and active
+    const room = await Room.findOne({
+      _id: req.body.room,
+      isActive: true,
+    });
+
     if (!room) {
-      return next(new ErrorResponse("Room not found", 404));
+      return next(
+        new ErrorResponse("Room not found or is no longer available", 404)
+      );
     }
 
     if (room.status !== "available") {
@@ -1050,19 +1060,24 @@ exports.createGuest = async (req, res, next) => {
     // Manually populate room information to avoid timeout issues
     if (guest && guest.room) {
       try {
-        const roomData = await Room.findById(guest.room).select("number type floor price").lean();
+        const roomData = await Room.findById(guest.room)
+          .select("number type floor price")
+          .lean();
         if (roomData) {
           guest.room = roomData;
         }
       } catch (roomError) {
-        console.warn("Failed to populate room data for new guest:", roomError.message);
+        console.warn(
+          "Failed to populate room data for new guest:",
+          roomError.message
+        );
         // Use basic room data from the request
         guest.room = {
           _id: guest.room,
           number: room.number,
           type: room.type,
           floor: room.floor,
-          price: room.price
+          price: room.price,
         };
       }
     }

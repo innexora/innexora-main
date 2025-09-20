@@ -11,6 +11,11 @@ router.post("/guest", chatController.createGuestTicket);
 // Protected routes (require authentication)
 router.use(protect);
 
+// Stats route (must be before other routes)
+router
+  .route("/stats")
+  .get(authorize("staff", "manager", "admin"), ticketController.getTicketStats);
+
 // Ticket management routes (staff and above)
 router
   .route("/")

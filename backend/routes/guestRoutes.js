@@ -11,6 +11,11 @@ router
 // Protected routes (require authentication)
 router.use(protect);
 
+// Stats route (must be before other routes)
+router
+  .route("/stats")
+  .get(authorize("staff", "manager", "admin"), guestController.getGuestStats);
+
 // Guest management routes
 router
   .route("/")
@@ -28,10 +33,6 @@ router
 router
   .route("/history")
   .get(authorize("staff", "manager", "admin"), guestController.getGuestHistory);
-
-router
-  .route("/stats")
-  .get(authorize("staff", "manager", "admin"), guestController.getGuestStats);
 
 router
   .route("/:id")

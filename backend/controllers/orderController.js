@@ -11,9 +11,6 @@ const ErrorResponse = require("../utils/errorResponse");
 // @access  Private/Manager
 exports.getOrders = async (req, res, next) => {
   try {
-    const { status, roomNumber, orderType, date } = req.query;
-
-    // Use tenant models
     // Use tenant models - must exist for tenant domains
     if (!req.tenantModels || !req.tenantModels.Order) {
       console.error("Tenant models not available:", req.tenantModels);
@@ -24,12 +21,40 @@ exports.getOrders = async (req, res, next) => {
     }
     const Order = req.tenantModels.Order;
 
-    // Build query - remove manager filter for hotel-centric approach
+    // Extract pagination and filtering parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const search = req.query.search || "";
+    const status = req.query.status || "all";
+    const orderType = req.query.orderType || "all";
+    const { roomNumber, date } = req.query;
+
+    // Build query object
     const query = {};
 
-    if (status) query.status = status;
-    if (roomNumber) query.roomNumber = roomNumber;
-    if (orderType) query.orderType = orderType;
+    // Add search functionality
+    if (search) {
+      query.$or = [
+        { orderNumber: { $regex: search, $options: "i" } },
+        { "guest.name": { $regex: search, $options: "i" } },
+        { "room.number": { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Add status filter
+    if (status !== "all") {
+      query.status = status;
+    }
+
+    // Add order type filter
+    if (orderType !== "all") {
+      query.type = orderType;
+    }
+
+    // Add room number filter
+    if (roomNumber) {
+      query.roomNumber = roomNumber;
+    }
 
     // Date filter
     if (date) {
@@ -39,16 +64,45 @@ exports.getOrders = async (req, res, next) => {
       query.createdAt = { $gte: startDate, $lt: endDate };
     }
 
-    const orders = await Order.find(query)
-      .populate("guest", "name phone")
-      .populate("room", "number type floor")
-      .populate("items.food", "name category")
-      .sort({ createdAt: -1 });
+    // Calculate skip value for pagination
+    const skip = (page - 1) * limit;
+
+    // Execute count and find queries in parallel
+    const [total, orders] = await Promise.all([
+      Order.countDocuments(query),
+      Order.find(query)
+        .populate("guest", "name phone")
+        .populate("room", "number type floor")
+        .populate("items.food", "name category")
+        .select("-__v")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    console.log(
+      `Found ${orders.length} orders (page ${page} of ${totalPages})`
+    );
 
     res.status(200).json({
       success: true,
       count: orders.length,
+      total: total,
       data: orders,
+      pagination: {
+        current: page,
+        pages: totalPages,
+        total: total,
+        limit: limit,
+        hasNext: hasNextPage,
+        hasPrev: hasPrevPage,
+      },
     });
   } catch (error) {
     console.error("Get orders error:", error);
@@ -329,7 +383,6 @@ exports.updateOrderStatus = async (req, res, next) => {
 // @access  Private/Manager
 exports.getOrderStats = async (req, res, next) => {
   try {
-    // Use tenant models
     // Use tenant models - must exist for tenant domains
     if (!req.tenantModels || !req.tenantModels.Order) {
       console.error("Tenant models not available:", req.tenantModels);
@@ -340,61 +393,86 @@ exports.getOrderStats = async (req, res, next) => {
     }
     const Order = req.tenantModels.Order;
 
-    const { period = "today" } = req.query;
+    // Get current date for today's stats
+    const today = new Date();
+    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
 
-    let dateFilter = {};
-    const now = new Date();
-
-    switch (period) {
-      case "today":
-        dateFilter = {
-          createdAt: {
-            $gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
-            $lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1),
-          },
-        };
-        break;
-      case "week":
-        const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
-        dateFilter = { createdAt: { $gte: weekStart } };
-        break;
-      case "month":
-        dateFilter = {
-          createdAt: {
-            $gte: new Date(now.getFullYear(), now.getMonth(), 1),
-          },
-        };
-        break;
-    }
-
+    // Get stats using aggregation for efficiency
     const stats = await Order.aggregate([
-      { $match: { ...dateFilter } },
       {
         $group: {
-          _id: "$status",
-          count: { $sum: 1 },
-          totalAmount: { $sum: "$totalAmount" },
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalRevenue: { $sum: "$totalAmount" },
+          pendingOrders: {
+            $sum: {
+              $cond: [{ $in: ["$status", ["pending", "confirmed"]] }, 1, 0],
+            },
+          },
+          activeOrders: {
+            $sum: {
+              $cond: [{ $in: ["$status", ["preparing", "ready"]] }, 1, 0],
+            },
+          },
+          completedOrders: {
+            $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] },
+          },
+          todaysOrders: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $gte: ["$createdAt", startOfDay] },
+                    { $lte: ["$createdAt", endOfDay] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+          todaysRevenue: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $gte: ["$createdAt", startOfDay] },
+                    { $lte: ["$createdAt", endOfDay] },
+                  ],
+                },
+                "$totalAmount",
+                0,
+              ],
+            },
+          },
+          avgOrderValue: { $avg: "$totalAmount" },
         },
       },
     ]);
 
-    const formattedStats = stats.reduce((acc, curr) => {
-      acc[curr._id] = {
-        count: curr.count,
-        totalAmount: curr.totalAmount,
-      };
-      return acc;
-    }, {});
-
-    // Get total revenue
-    const totalRevenue = stats.reduce((sum, stat) => sum + stat.totalAmount, 0);
+    const result = stats[0] || {
+      totalOrders: 0,
+      totalRevenue: 0,
+      pendingOrders: 0,
+      activeOrders: 0,
+      completedOrders: 0,
+      todaysOrders: 0,
+      todaysRevenue: 0,
+      avgOrderValue: 0,
+    };
 
     res.status(200).json({
       success: true,
       data: {
-        ...formattedStats,
-        totalRevenue,
-        period,
+        totalOrders: result.totalOrders,
+        totalRevenue: Math.round(result.totalRevenue || 0),
+        pendingOrders: result.pendingOrders,
+        activeOrders: result.activeOrders,
+        completedOrders: result.completedOrders,
+        todaysOrders: result.todaysOrders,
+        todaysRevenue: Math.round(result.todaysRevenue || 0),
+        avgOrderValue: Math.round(result.avgOrderValue || 0),
       },
     });
   } catch (error) {

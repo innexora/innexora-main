@@ -7,7 +7,10 @@ const getBaseUrl = (): string => {
   }
 
   // If we have a production API URL set, use it
-  if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes("localhost")) {
+  if (
+    process.env.NEXT_PUBLIC_API_URL &&
+    !process.env.NEXT_PUBLIC_API_URL.includes("localhost")
+  ) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
 
@@ -29,7 +32,7 @@ const getBaseUrl = (): string => {
   }
 
   // Fallback to main domain or localhost for development
-  const baseUrl = host.includes("localhost") 
+  const baseUrl = host.includes("localhost")
     ? `${protocol}//${host}/api`
     : process.env.NEXT_PUBLIC_API_URL || `${protocol}//${host}/api`;
   console.log("🌐 Axios API Client: Main domain URL constructed:", baseUrl);
@@ -159,10 +162,14 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Don't log 400 errors with billDetails as they are expected business logic
-    if (
-      !(error.response?.status === 400 && error.response?.data?.billDetails)
-    ) {
+    // Don't log expected business logic errors as they are handled in the UI
+    const isExpectedBusinessLogicError =
+      error.response?.status === 400 &&
+      (error.response?.data?.billDetails ||
+        error.response?.data?.activeTickets ||
+        error.response?.data?.activeGuests);
+
+    if (!isExpectedBusinessLogicError) {
       console.error("API Error:", {
         url: error.config?.url,
         status: error.response?.status,
@@ -177,11 +184,17 @@ apiClient.interceptors.response.use(
       window.location.href = "/auth/login";
     }
 
-    // For 400 errors with billDetails, preserve the full error structure
-    if (error.response?.status === 400 && error.response?.data?.billDetails) {
+    // For 400 errors with expected business logic, preserve the full error structure without logging
+    if (
+      error.response?.status === 400 &&
+      (error.response?.data?.billDetails ||
+        error.response?.data?.activeTickets ||
+        error.response?.data?.activeGuests)
+    ) {
       // Create a custom error that preserves the response data
       const customError = new Error(error.response.data.message);
       (customError as any).response = error.response;
+      (customError as any).isBusinessLogicError = true; // Flag to identify business logic errors
       return Promise.reject(customError);
     }
 

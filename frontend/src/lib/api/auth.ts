@@ -19,9 +19,12 @@ export interface AuthResponse {
     name: string;
     email: string;
     hotelName: string;
+    role: string;
   };
 }
 
+// Registration disabled - only admins can create users
+/*
 export const register = async (data: RegisterData): Promise<AuthResponse> => {
   const response = await apiClient.post<any>("/auth/register", data);
   if (!response.success) {
@@ -41,6 +44,7 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
   }
   throw new Error("Registration failed - invalid response format");
 };
+*/
 
 export const login = async (data: LoginData): Promise<AuthResponse> => {
   const response = await apiClient.post<any>("/auth/login", data);

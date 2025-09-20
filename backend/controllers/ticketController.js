@@ -367,3 +367,64 @@ exports.addMessage = async (req, res, next) => {
     next(new ErrorResponse("Server error", 500));
   }
 };
+
+// @desc    Get ticket statistics
+// @route   GET /api/tickets/stats
+// @access  Private/Manager
+exports.getTicketStats = async (req, res, next) => {
+  try {
+    // Use tenant models - must exist for tenant domains
+    if (!req.tenantModels || !req.tenantModels.Ticket) {
+      console.error("Tenant models not available:", req.tenantModels);
+      return res.status(500).json({
+        success: false,
+        error: "Tenant database not properly initialized",
+      });
+    }
+    const Ticket = req.tenantModels.Ticket;
+
+    // Get stats using aggregation for efficiency
+    const stats = await Ticket.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalTickets: { $sum: 1 },
+          raisedTickets: {
+            $sum: { $cond: [{ $eq: ["$status", "raised"] }, 1, 0] },
+          },
+          inProgressTickets: {
+            $sum: { $cond: [{ $eq: ["$status", "in_progress"] }, 1, 0] },
+          },
+          resolvedTickets: {
+            $sum: { $cond: [{ $eq: ["$status", "resolved"] }, 1, 0] },
+          },
+          closedTickets: {
+            $sum: { $cond: [{ $eq: ["$status", "closed"] }, 1, 0] },
+          },
+        },
+      },
+    ]);
+
+    const result = stats[0] || {
+      totalTickets: 0,
+      raisedTickets: 0,
+      inProgressTickets: 0,
+      resolvedTickets: 0,
+      closedTickets: 0,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalTickets: result.totalTickets,
+        pendingTickets: result.raisedTickets,
+        inProgressTickets: result.inProgressTickets,
+        resolvedTickets: result.resolvedTickets,
+        closedTickets: result.closedTickets,
+      },
+    });
+  } catch (error) {
+    console.error("Get ticket stats error:", error);
+    next(new ErrorResponse("Server error", 500));
+  }
+};

@@ -1,41 +1,57 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const roomController = require('../controllers/roomController');
-const { protect, authorize } = require('../middleware/authMiddleware');
+const roomController = require("../controllers/roomController");
+const { protect, authorize } = require("../middleware/authMiddleware");
 
 // Protected routes (require authentication)
 router.use(protect);
 
+// Stats route (must be before /:id routes)
+router
+  .route("/stats")
+  .get(authorize("staff", "manager", "admin"), roomController.getRoomStats);
+
 // Room management routes
 router
-  .route('/')
-  .get(authorize('staff', 'manager', 'admin'), roomController.getRooms)
-  .post(authorize('manager', 'admin'), roomController.validateRoomData, roomController.createRoom);
+  .route("/")
+  .get(authorize("staff", "manager", "admin"), roomController.getRooms)
+  .post(
+    authorize("manager", "admin"),
+    roomController.validateRoomData,
+    roomController.createRoom
+  );
 
 router
-  .route('/summary')
-  .get(authorize('staff', 'manager', 'admin'), roomController.getRoomSummary);
+  .route("/summary")
+  .get(authorize("staff", "manager", "admin"), roomController.getRoomSummary);
 
 router
-  .route('/available')
-  .get(authorize('staff', 'manager', 'admin'), roomController.getAvailableRooms);
+  .route("/available")
+  .get(
+    authorize("staff", "manager", "admin"),
+    roomController.getAvailableRooms
+  );
 
 router
-  .route('/occupied')
-  .get(authorize('staff', 'manager', 'admin'), roomController.getOccupiedRooms);
+  .route("/occupied")
+  .get(authorize("staff", "manager", "admin"), roomController.getOccupiedRooms);
 
 router
-  .route('/status/:status')
-  .get(authorize('staff', 'manager', 'admin'), roomController.getRoomsByStatus);
+  .route("/status/:status")
+  .get(authorize("staff", "manager", "admin"), roomController.getRoomsByStatus);
 
 router
-  .route('/:id')
-  .get(authorize('staff', 'manager', 'admin'), roomController.getRoom)
-  .put(authorize('manager', 'admin'), roomController.validateRoomData, roomController.updateRoom)
-  .delete(authorize('admin'), roomController.deleteRoom);
+  .route("/:id")
+  .get(authorize("staff", "manager", "admin"), roomController.getRoom)
+  .put(
+    authorize("manager", "admin"),
+    roomController.validateRoomData,
+    roomController.updateRoom
+  )
+  .delete(authorize("admin"), roomController.deleteRoom);
 
 router
-  .route('/:id/status')
-  .put(authorize('manager', 'admin'), roomController.updateRoomStatus);
+  .route("/:id/status")
+  .put(authorize("manager", "admin"), roomController.updateRoomStatus);
 
 module.exports = router;

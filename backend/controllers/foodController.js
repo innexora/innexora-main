@@ -2,36 +2,151 @@ const Food = require("../models/Food");
 const { body, validationResult } = require("express-validator");
 const ErrorResponse = require("../utils/errorResponse");
 
-// @desc    Get all food items for the manager
+// @desc    Get food statistics
+// @route   GET /api/food/stats
+// @access  Private/Manager
+exports.getFoodStats = async (req, res, next) => {
+  try {
+    if (!req.tenantModels || !req.tenantModels.Food) {
+      return res.status(500).json({
+        success: false,
+        error: "Tenant database not properly initialized",
+      });
+    }
+
+    const Food = req.tenantModels.Food;
+
+    // Get stats using aggregation for efficiency
+    const stats = await Food.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalItems: { $sum: 1 },
+          availableItems: {
+            $sum: { $cond: ["$isAvailable", 1, 0] },
+          },
+          unavailableItems: {
+            $sum: { $cond: ["$isAvailable", 0, 1] },
+          },
+          totalCategories: { $addToSet: "$category" },
+          avgPrice: { $avg: "$price" },
+          avgPrepTime: { $avg: "$preparationTime" },
+        },
+      },
+      {
+        $addFields: {
+          totalCategories: { $size: "$totalCategories" },
+        },
+      },
+    ]);
+
+    const result = stats[0] || {
+      totalItems: 0,
+      availableItems: 0,
+      unavailableItems: 0,
+      totalCategories: 0,
+      avgPrice: 0,
+      avgPrepTime: 0,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalItems: result.totalItems,
+        availableItems: result.availableItems,
+        unavailableItems: result.unavailableItems,
+        totalCategories: result.totalCategories,
+        avgPrice: Math.round(result.avgPrice || 0),
+        avgPrepTime: Math.round(result.avgPrepTime || 0),
+      },
+    });
+  } catch (error) {
+    console.error("Get food stats error:", error);
+    next(new ErrorResponse("Server error", 500));
+  }
+};
+
+// @desc    Get all food items with filtering
 // @route   GET /api/food
 // @access  Private/Manager
 exports.getFoodItems = async (req, res, next) => {
   try {
-    const Food = req.tenantModels
-      ? req.tenantModels.Food
-      : require("../models/Food");
-    const { category, isAvailable, search } = req.query;
+    if (!req.tenantModels || !req.tenantModels.Food) {
+      return res.status(500).json({
+        success: false,
+        error: "Tenant database not properly initialized",
+      });
+    }
 
-    // Build query - remove manager filter for hotel-centric approach
+    const Food = req.tenantModels.Food;
+
+    // Extract pagination and filtering parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const search = req.query.search || "";
+    const category = req.query.category || "all";
+    const available = req.query.available;
+
+    // Build query object
     const query = {};
-
-    if (category) query.category = category;
-    if (isAvailable !== undefined) query.isAvailable = isAvailable === "true";
 
     // Add search functionality
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
+        { category: { $regex: search, $options: "i" } },
       ];
     }
 
-    const foodItems = await Food.find(query).sort({ category: 1, name: 1 });
+    // Add category filter
+    if (category !== "all") {
+      query.category = category;
+    }
+
+    // Add availability filter
+    if (available === "true") {
+      query.available = true;
+    } else if (available === "false") {
+      query.available = false;
+    }
+
+    // Calculate skip value for pagination
+    const skip = (page - 1) * limit;
+
+    // Execute count and find queries in parallel
+    const [total, foods] = await Promise.all([
+      Food.countDocuments(query),
+      Food.find(query)
+        .select("-__v")
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    console.log(
+      `Found ${foods.length} food items (page ${page} of ${totalPages})`
+    );
 
     res.status(200).json({
       success: true,
-      count: foodItems.length,
-      data: foodItems,
+      count: foods.length,
+      total: total,
+      data: foods,
+      pagination: {
+        current: page,
+        pages: totalPages,
+        total: total,
+        limit: limit,
+        hasNext: hasNextPage,
+        hasPrev: hasPrevPage,
+      },
     });
   } catch (error) {
     console.error("Get food items error:", error);
