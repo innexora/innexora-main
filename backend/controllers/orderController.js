@@ -406,17 +406,22 @@ exports.getOrderStats = async (req, res, next) => {
           totalOrders: { $sum: 1 },
           totalRevenue: { $sum: "$totalAmount" },
           pendingOrders: {
-            $sum: {
-              $cond: [{ $in: ["$status", ["pending", "confirmed"]] }, 1, 0],
-            },
+            $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
           },
-          activeOrders: {
-            $sum: {
-              $cond: [{ $in: ["$status", ["preparing", "ready"]] }, 1, 0],
-            },
+          confirmedOrders: {
+            $sum: { $cond: [{ $eq: ["$status", "confirmed"] }, 1, 0] },
           },
-          completedOrders: {
+          preparingOrders: {
+            $sum: { $cond: [{ $eq: ["$status", "preparing"] }, 1, 0] },
+          },
+          readyOrders: {
+            $sum: { $cond: [{ $eq: ["$status", "ready"] }, 1, 0] },
+          },
+          deliveredOrders: {
             $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] },
+          },
+          cancelledOrders: {
+            $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] },
           },
           todaysOrders: {
             $sum: {
@@ -455,24 +460,37 @@ exports.getOrderStats = async (req, res, next) => {
       totalOrders: 0,
       totalRevenue: 0,
       pendingOrders: 0,
-      activeOrders: 0,
-      completedOrders: 0,
+      confirmedOrders: 0,
+      preparingOrders: 0,
+      readyOrders: 0,
+      deliveredOrders: 0,
+      cancelledOrders: 0,
       todaysOrders: 0,
       todaysRevenue: 0,
       avgOrderValue: 0,
     };
+
+    // Calculate completion rate
+    const completionRate = result.totalOrders > 0 
+      ? Math.round((result.deliveredOrders / result.totalOrders) * 100)
+      : 0;
 
     res.status(200).json({
       success: true,
       data: {
         totalOrders: result.totalOrders,
         totalRevenue: Math.round(result.totalRevenue || 0),
-        pendingOrders: result.pendingOrders,
-        activeOrders: result.activeOrders,
-        completedOrders: result.completedOrders,
+        pending: { count: result.pendingOrders, totalAmount: 0 },
+        confirmed: { count: result.confirmedOrders, totalAmount: 0 },
+        preparing: { count: result.preparingOrders, totalAmount: 0 },
+        ready: { count: result.readyOrders, totalAmount: 0 },
+        delivered: { count: result.deliveredOrders, totalAmount: 0 },
+        cancelled: { count: result.cancelledOrders, totalAmount: 0 },
         todaysOrders: result.todaysOrders,
         todaysRevenue: Math.round(result.todaysRevenue || 0),
         avgOrderValue: Math.round(result.avgOrderValue || 0),
+        completionRate: `${completionRate}%`,
+        period: 'today'
       },
     });
   } catch (error) {

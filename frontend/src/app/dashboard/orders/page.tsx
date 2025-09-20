@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Pagination } from '@/components/ui/pagination';
 import { 
   Plus, 
   Search, 
@@ -122,14 +124,25 @@ export default function OrdersPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pages: 1,
+    total: 0,
+    limit: 20,
+  });
   const [stats, setStats] = useState({
+    totalOrders: 0,
+    totalRevenue: 0,
     pending: { count: 0, totalAmount: 0 },
     confirmed: { count: 0, totalAmount: 0 },
     preparing: { count: 0, totalAmount: 0 },
     ready: { count: 0, totalAmount: 0 },
     delivered: { count: 0, totalAmount: 0 },
     cancelled: { count: 0, totalAmount: 0 },
-    totalRevenue: 0,
+    todaysOrders: 0,
+    todaysRevenue: 0,
+    avgOrderValue: 0,
+    completionRate: '0%',
     period: 'today'
   });
   const [statsLoading, setStatsLoading] = useState(false);
@@ -143,19 +156,82 @@ export default function OrdersPage() {
   });
 
   useEffect(() => {
-    fetchOrders();
+    fetchOrders(pagination.current, searchTerm, statusFilter, typeFilter);
+  }, [pagination.current, searchTerm, statusFilter, typeFilter]);
+
+  useEffect(() => {
     fetchFoodItems();
     fetchGuests();
     fetchStats();
   }, []);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (
+    page = 1,
+    search = searchTerm,
+    status = statusFilter,
+    type = typeFilter
+  ) => {
     try {
-      const response = await apiClient.get('/orders');
-      setOrders(response.data.data);
+      console.log("Fetching orders...");
+      setIsLoading(true);
+
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: "20",
+        ...(search && { search }),
+        ...(status !== "all" && { status }),
+        ...(type !== "all" && { orderType: type }),
+      });
+
+      const response = await apiClient.get(`/orders?${params.toString()}`);
+      console.log("Orders API Response:", response.data);
+
+      // Handle the expected response format: { success: true, data: Order[], count: number, pagination: {...} }
+      if (
+        response.data &&
+        response.data.success &&
+        Array.isArray(response.data.data)
+      ) {
+        const ordersData = response.data.data;
+        console.log("Orders data:", ordersData);
+
+        // Transform the data to match our frontend Order interface
+        const processedOrders = ordersData.map((order: any) => ({
+          ...order,
+          id: order._id, // Map _id to id
+          _id: order._id, // Keep _id for backward compatibility
+          // Ensure all required fields have default values if missing
+          orderNumber: order.orderNumber || "",
+          guest: order.guest || { _id: "", name: "", phone: "" },
+          room: order.room || { _id: "", number: "" },
+          items: Array.isArray(order.items) ? order.items : [],
+          totalAmount: order.totalAmount || 0,
+          status: order.status || "pending",
+          type: order.type || "room_service",
+          orderDate: order.orderDate || order.createdAt,
+          estimatedDeliveryTime: order.estimatedDeliveryTime,
+          actualDeliveryTime: order.actualDeliveryTime,
+          specialInstructions: order.specialInstructions || "",
+          paymentStatus: order.paymentStatus || "pending",
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+        }));
+
+        console.log("Processed orders:", processedOrders);
+        setOrders(processedOrders);
+
+        // Update pagination from server response
+        if (response.data.pagination) {
+          setPagination(response.data.pagination);
+        }
+      } else {
+        console.error("Unexpected API response format:", response.data);
+        setOrders([]);
+      }
     } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast.error('Failed to fetch orders');
+      console.error("Failed to fetch orders:", error);
+      toast.error("Failed to load orders");
+      setOrders([]);
     } finally {
       setIsLoading(false);
     }
@@ -191,13 +267,18 @@ export default function OrdersPage() {
       // Ensure all status types are present with default values
       const defaultStatus = { count: 0, totalAmount: 0 };
       setStats({
+        totalOrders: statsData.totalOrders || 0,
+        totalRevenue: statsData.totalRevenue || 0,
         pending: statsData.pending || defaultStatus,
         confirmed: statsData.confirmed || defaultStatus,
         preparing: statsData.preparing || defaultStatus,
         ready: statsData.ready || defaultStatus,
         delivered: statsData.delivered || defaultStatus,
         cancelled: statsData.cancelled || defaultStatus,
-        totalRevenue: statsData.totalRevenue || 0,
+        todaysOrders: statsData.todaysOrders || 0,
+        todaysRevenue: statsData.todaysRevenue || 0,
+        avgOrderValue: statsData.avgOrderValue || 0,
+        completionRate: statsData.completionRate || '0%',
         period: statsData.period || 'today'
       });
     } catch (error) {
@@ -205,13 +286,18 @@ export default function OrdersPage() {
       setStatsError('Failed to load statistics');
       // Set default stats on error
       setStats({
+        totalOrders: 0,
+        totalRevenue: 0,
         pending: { count: 0, totalAmount: 0 },
         confirmed: { count: 0, totalAmount: 0 },
         preparing: { count: 0, totalAmount: 0 },
         ready: { count: 0, totalAmount: 0 },
         delivered: { count: 0, totalAmount: 0 },
         cancelled: { count: 0, totalAmount: 0 },
-        totalRevenue: 0,
+        todaysOrders: 0,
+        todaysRevenue: 0,
+        avgOrderValue: 0,
+        completionRate: '0%',
         period: 'today'
       });
     } finally {
@@ -242,7 +328,7 @@ export default function OrdersPage() {
         toast.success('Order created successfully!');
         setIsCreateDialogOpen(false);
         resetOrderForm();
-        fetchOrders();
+        fetchOrders(pagination.current, searchTerm, statusFilter, typeFilter);
         fetchStats();
       } else {
         toast.error(response.data.message || 'Failed to create order');
@@ -270,7 +356,7 @@ export default function OrdersPage() {
     try {
       await apiClient.patch(`/orders/${orderId}/status`, { status });
       toast.success('Order status updated successfully!');
-      fetchOrders();
+      fetchOrders(pagination.current, searchTerm, statusFilter, typeFilter);
       fetchStats();
     } catch (error: any) {
       console.error('Error updating order status:', error);
@@ -305,14 +391,25 @@ export default function OrdersPage() {
     setOrderForm({ ...orderForm, items: newItems });
   };
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.guest.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.room.number.includes(searchTerm);
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    const matchesType = typeFilter === 'all' || order.type === typeFilter;
-    return matchesSearch && matchesStatus && matchesType;
-  });
+  // Update pagination and search handlers to reset to page 1
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  };
+
+  const handleTypeFilterChange = (value: string) => {
+    setTypeFilter(value);
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  };
+
+  const handlePageChange = (page: number) => {
+    setPagination((prev) => ({ ...prev, current: page }));
+  };
 
   const getStatusBadge = (status: string) => {
     return (
@@ -361,145 +458,61 @@ export default function OrdersPage() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statsLoading ? (
-          // Loading skeleton for stats
-          Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-                <div className="h-4 w-4 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-8 w-16 bg-gray-200 dark:bg-gray-800 rounded animate-pulse mb-1" />
-                <div className="h-3 w-20 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-              </CardContent>
-            </Card>
-          ))
-        ) : statsError ? (
-          // Error state for stats
-          <div className="col-span-full">
-            <Card className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 rounded-sm">
-              <CardContent className="p-4 text-center">
-                <div className="text-red-600 dark:text-red-400 mb-2">
-                  <AlertCircle className="h-8 w-8 mx-auto" />
-                </div>
-                <p className="text-red-800 dark:text-red-200 font-medium">{statsError}</p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={fetchStats}
-                  className="mt-2 bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900 rounded-sm"
-                >
-                  Retry
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <>
-            <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-black dark:text-white">Pending Orders</CardTitle>
-                <Clock className="h-4 w-4 text-black dark:text-white opacity-70" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-medium text-yellow-600 dark:text-yellow-400">{stats.pending?.count || 0}</div>
-                <p className="text-xs text-black dark:text-white opacity-70">
-                  ₹{stats.pending?.totalAmount || 0} pending
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-black dark:text-white">In Progress</CardTitle>
-                <ChefHat className="h-4 w-4 text-black dark:text-white opacity-70" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-medium text-orange-600 dark:text-orange-400">
-                  {(stats.confirmed?.count || 0) + (stats.preparing?.count || 0)}
-                </div>
-                <p className="text-xs text-black dark:text-white opacity-70">
-                  Confirmed: {stats.confirmed?.count || 0} | Preparing: {stats.preparing?.count || 0}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-black dark:text-white">Ready for Delivery</CardTitle>
-                <CheckCircle className="h-4 w-4 text-black dark:text-white opacity-70" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-medium text-green-600 dark:text-green-400">{stats.ready?.count || 0}</div>
-                <p className="text-xs text-black dark:text-white opacity-70">
-                  ₹{stats.ready?.totalAmount || 0} ready
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-black dark:text-white">Total Revenue</CardTitle>
-                <DollarSign className="h-4 w-4 text-black dark:text-white opacity-70" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-medium text-black dark:text-white">₹{stats.totalRevenue || 0}</div>
-                <p className="text-xs text-black dark:text-white opacity-70">
-                  Period: {stats.period || 'today'}
-                </p>
-              </CardContent>
-            </Card>
-          </>
-        )}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-black dark:text-white">
+              Total Orders
+            </CardTitle>
+            <Receipt className="h-4 w-4 text-black dark:text-white opacity-70" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl font-medium text-black dark:text-white">
+              {stats.totalOrders}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-black dark:text-white">
+              Pending
+            </CardTitle>
+            <Clock className="h-4 w-4 text-black dark:text-white opacity-70" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl font-medium text-black dark:text-white">
+              {stats.pending?.count || 0}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-black dark:text-white">
+              Completion Rate
+            </CardTitle>
+            <CheckCircle className="h-4 w-4 text-black dark:text-white opacity-70" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl font-medium text-black dark:text-white">
+              {stats.completionRate}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-black dark:text-white">
+              Avg. Order Value
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-black dark:text-white opacity-70" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl font-medium text-black dark:text-white">
+              ₹{stats.avgOrderValue}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Additional Stats Row */}
-      {!statsLoading && !statsError && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-black dark:text-white">Completed Orders</CardTitle>
-              <CheckCircle className="h-4 w-4 text-black dark:text-white opacity-70" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-medium text-blue-600 dark:text-blue-400">{stats.delivered?.count || 0}</div>
-              <p className="text-xs text-black dark:text-white opacity-70">
-                ₹{stats.delivered?.totalAmount || 0} completed
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-black dark:text-white">Cancelled Orders</CardTitle>
-              <XCircle className="h-4 w-4 text-black dark:text-white opacity-70" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-medium text-red-600 dark:text-red-400">{stats.cancelled?.count || 0}</div>
-              <p className="text-xs text-black dark:text-white opacity-70">
-                ₹{stats.cancelled?.totalAmount || 0} cancelled
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-black dark:text-white">Total Orders</CardTitle>
-              <Receipt className="h-4 w-4 text-black dark:text-white opacity-70" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-medium text-black dark:text-white">
-                {(stats.pending?.count || 0) + 
-                 (stats.confirmed?.count || 0) + 
-                 (stats.preparing?.count || 0) + 
-                 (stats.ready?.count || 0) + 
-                 (stats.delivered?.count || 0) + 
-                 (stats.cancelled?.count || 0)}
-              </div>
-              <p className="text-xs text-black dark:text-white opacity-70">
-                All time orders
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Actions and Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -509,11 +522,11 @@ export default function OrdersPage() {
             <Input
               placeholder="Search orders..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-8 bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
             <SelectTrigger className="w-[180px] bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
@@ -527,7 +540,7 @@ export default function OrdersPage() {
               <SelectItem value="cancelled" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">Cancelled</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <Select value={typeFilter} onValueChange={handleTypeFilterChange}>
             <SelectTrigger className="w-[180px] bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm">
               <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
@@ -677,104 +690,162 @@ export default function OrdersPage() {
       {/* Orders List */}
       <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
         <CardHeader>
-          <CardTitle className="text-black dark:text-white">Order Management</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base font-medium text-black dark:text-white">
+            <Receipt className="h-5 w-5" />
+            Orders ({pagination.total})
+          </CardTitle>
+          <CardDescription className="text-sm text-black dark:text-white opacity-70">
+            Manage food orders, update status, and view details
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {isLoading ? (
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-black dark:border-white mb-4"></div>
-                <p className="text-black dark:text-white opacity-70">Loading orders...</p>
-              </div>
-            ) : filteredOrders.length === 0 ? (
-              <div className="text-center py-8">
-                <Receipt className="mx-auto h-12 w-12 text-black dark:text-white opacity-70 mb-4" />
-                <h3 className="text-lg font-medium mb-2 text-black dark:text-white">No Orders Found</h3>
-                <p className="text-black dark:text-white opacity-70 mb-4">
-                  No orders found matching your criteria.
-                </p>
-                <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 rounded-sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Order
-                </Button>
-              </div>
-            ) : (
-              filteredOrders.map((order) => (
-                <div key={order._id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-sm bg-white dark:bg-black">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium text-black dark:text-white">#{order.orderNumber}</h3>
-                        {getStatusBadge(order.status)}
-                        <Badge variant="secondary" className="capitalize bg-gray-100 dark:bg-gray-900 text-black dark:text-white border-gray-200 dark:border-gray-800 rounded-sm">
-                          {order.type.replace('_', ' ')}
-                        </Badge>
+          <Table>
+            <TableHeader>
+              <TableRow className="border-gray-200 dark:border-gray-800">
+                <TableHead className="text-black dark:text-white font-medium">
+                  Order #
+                </TableHead>
+                <TableHead className="text-black dark:text-white font-medium">
+                  Guest
+                </TableHead>
+                <TableHead className="text-black dark:text-white font-medium">
+                  Room
+                </TableHead>
+                <TableHead className="text-black dark:text-white font-medium">
+                  Amount
+                </TableHead>
+                <TableHead className="text-black dark:text-white font-medium">
+                  Date
+                </TableHead>
+                <TableHead className="text-black dark:text-white font-medium">
+                  Status
+                </TableHead>
+                <TableHead className="text-black dark:text-white font-medium">
+                  Type
+                </TableHead>
+                <TableHead className="text-right text-black dark:text-white font-medium">
+                  Actions
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow className="border-gray-200 dark:border-gray-800">
+                  <TableCell
+                    colSpan={8}
+                    className="text-center py-8 text-black dark:text-white"
+                  >
+                    Loading orders...
+                  </TableCell>
+                </TableRow>
+              ) : orders.length === 0 ? (
+                <TableRow className="border-gray-200 dark:border-gray-800">
+                  <TableCell
+                    colSpan={8}
+                    className="text-center py-8 text-black dark:text-white opacity-70"
+                  >
+                    {orders.length === 0
+                      ? "No orders found. Create your first order to get started."
+                      : "No orders match your current filters."}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                orders.map((order) => (
+                  <TableRow
+                    key={order._id}
+                    className="border-gray-200 dark:border-gray-800"
+                  >
+                    <TableCell className="font-medium text-black dark:text-white">
+                      #{order.orderNumber}
+                    </TableCell>
+                    <TableCell className="text-black dark:text-white">
+                      {order.guest.name}
+                    </TableCell>
+                    <TableCell className="text-black dark:text-white">
+                      {order.room.number}
+                    </TableCell>
+                    <TableCell className="text-black dark:text-white">
+                      ₹{order.totalAmount}
+                      <div className="text-xs text-black dark:text-white opacity-70">
+                        {order.items.length} item{order.items.length > 1 ? 's' : ''}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setIsViewDialogOpen(true);
+                          }}
+                          className="h-5 w-5 p-0 ml-1 text-black dark:text-white hover:bg-transparent"
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-black dark:text-white opacity-70">
-                        <div className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          {order.guest.name}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Building2 className="h-3 w-3" />
-                          Room {order.room.number}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="h-3 w-3" />
-                          ₹{order.totalAmount}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {formatDateSafely(order.orderDate, order.createdAt || order.updatedAt)}
-                        </div>
+                    </TableCell>
+                    <TableCell className="text-black dark:text-white">
+                      {formatDateSafely(order.orderDate, order.createdAt || order.updatedAt)}
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(order.status)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="capitalize bg-gray-100 dark:bg-gray-900 text-black dark:text-white border-gray-200 dark:border-gray-800 rounded-sm">
+                        {order.type.replace('_', ' ')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setIsViewDialogOpen(true);
+                          }}
+                          className="h-8 w-8 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-sm"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {canAdvanceStatus(order.status) && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleUpdateOrderStatus(order._id, getNextStatus(order.status)!)}
+                            className="bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 rounded-sm"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            {getNextStatus(order.status) === 'confirmed' && 'Confirm'}
+                            {getNextStatus(order.status) === 'preparing' && 'Start Preparing'}
+                            {getNextStatus(order.status) === 'ready' && 'Mark Ready'}
+                            {getNextStatus(order.status) === 'delivered' && 'Mark Delivered'}
+                          </Button>
+                        )}
+                        {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleUpdateOrderStatus(order._id, 'cancelled')}
+                            className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded-sm"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
-                      <div className="text-sm text-black dark:text-white opacity-70 mt-1">
-                        {order.items.length} item{order.items.length > 1 ? 's' : ''}: {order.items.map(item => `${item.quantity}x ${item.food.name}`).join(', ')}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setIsViewDialogOpen(true);
-                      }}
-                      className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm"
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                    {canAdvanceStatus(order.status) && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handleUpdateOrderStatus(order._id, getNextStatus(order.status)!)}
-                        className="bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 rounded-sm"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        {getNextStatus(order.status) === 'confirmed' && 'Confirm'}
-                        {getNextStatus(order.status) === 'preparing' && 'Start Preparing'}
-                        {getNextStatus(order.status) === 'ready' && 'Mark Ready'}
-                        {getNextStatus(order.status) === 'delivered' && 'Mark Delivered'}
-                      </Button>
-                    )}
-                    {order.status !== 'delivered' && order.status !== 'cancelled' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleUpdateOrderStatus(order._id, 'cancelled')}
-                        className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded-sm"
-                      >
-                        <XCircle className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+
+          {/* Pagination */}
+          <Pagination
+            currentPage={pagination.current}
+            totalPages={pagination.pages}
+            totalItems={pagination.total}
+            itemsPerPage={pagination.limit}
+            onPageChange={handlePageChange}
+            itemName="orders"
+          />
         </CardContent>
       </Card>
 
