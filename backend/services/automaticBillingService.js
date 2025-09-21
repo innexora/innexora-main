@@ -42,20 +42,22 @@ class AutomaticBillingService {
       const nights = this.calculateNights(checkInDate, checkOutDate);
       const baseCharges = roomPrice * nights;
 
-      // Calculate early check-in charges
+      // Calculate early check-in charges using hotel timezone
       const earlyCheckinCharges = this.calculateEarlyCheckinCharges(
         checkInDate,
         standard_checkin_time,
         early_checkin_policy,
-        roomPrice
+        roomPrice,
+        hotel.timezone || "Asia/Kolkata" // Use hotel timezone or India as default
       );
 
-      // Calculate late check-out charges
+      // Calculate late check-out charges using hotel timezone
       const lateCheckoutCharges = this.calculateLateCheckoutCharges(
         checkOutDate,
         standard_checkout_time,
         late_checkout_policy,
-        roomPrice
+        roomPrice,
+        hotel.timezone || "Asia/Kolkata" // Use hotel timezone or India as default
       );
 
       // Calculate total
@@ -114,9 +116,14 @@ class AutomaticBillingService {
     checkInDate,
     standardCheckinTime,
     policy,
-    roomPrice
+    roomPrice,
+    timezone = "Asia/Kolkata"
   ) {
-    const checkInHour = checkInDate.getHours();
+    // Convert check-in date to hotel's local time
+    const checkInLocal = new Date(
+      checkInDate.toLocaleString("en-US", { timeZone: timezone })
+    );
+    const checkInHour = checkInLocal.getHours();
 
     // If check-in is at or after standard time, no early check-in charges
     if (checkInHour >= standardCheckinTime) {
@@ -157,9 +164,14 @@ class AutomaticBillingService {
     checkOutDate,
     standardCheckoutTime,
     policy,
-    roomPrice
+    roomPrice,
+    timezone = "Asia/Kolkata"
   ) {
-    const checkOutHour = checkOutDate.getHours();
+    // Convert check-out date to hotel's local time
+    const checkOutLocal = new Date(
+      checkOutDate.toLocaleString("en-US", { timeZone: timezone })
+    );
+    const checkOutHour = checkOutLocal.getHours();
 
     // If check-out is at or before standard time, no late check-out charges
     if (checkOutHour <= standardCheckoutTime) {
