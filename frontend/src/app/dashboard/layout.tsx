@@ -54,14 +54,14 @@ export default function DashboardLayout({
     { name: "Orders", href: "/dashboard/orders", icon: Receipt },
     { name: "Bills", href: "/dashboard/bills", icon: Receipt },
 
-    { name: "Service Requests", href: "/dashboard/tickets", icon: Ticket },
+    { name: "Requests", href: "/dashboard/tickets", icon: Ticket },
     { name: "Reports", href: "/dashboard/reports", icon: BarChart3 },
     {
-      name: "Billing Calculator",
+      name: "Calculator",
       href: "/dashboard/billing-calculator",
       icon: Calculator,
     },
-    { name: "Guest History", href: "/dashboard/guest-history", icon: History },
+    { name: "History", href: "/dashboard/guest-history", icon: History },
 
     // Add admin navigation item if user is admin
     ...(user?.role === "admin"
