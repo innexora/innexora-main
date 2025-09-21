@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema(
     },
     hotelName: {
       type: String,
-      required: [true, "Hotel name is required"],
+      required: false,
       trim: true,
     },
     role: {

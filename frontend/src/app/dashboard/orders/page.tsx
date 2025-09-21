@@ -1,19 +1,46 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Pagination } from '@/components/ui/pagination';
-import { 
-  Plus, 
-  Search, 
-  Clock, 
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Pagination } from "@/components/ui/pagination";
+import {
+  Plus,
+  Search,
+  Clock,
   DollarSign,
   User,
   Building2,
@@ -23,11 +50,11 @@ import {
   Eye,
   Edit,
   Receipt,
-  AlertCircle
-} from 'lucide-react';
-import { apiClient } from '@/lib/api/client';
-import { toast } from 'sonner';
-import { formatDistanceToNow } from 'date-fns';
+  AlertCircle,
+} from "lucide-react";
+import { apiClient } from "@/lib/api/client";
+import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
 
 interface OrderItem {
   food: {
@@ -57,13 +84,19 @@ interface Order {
   };
   items: OrderItem[];
   totalAmount: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
-  type: 'room_service' | 'restaurant' | 'takeaway';
+  status:
+    | "pending"
+    | "confirmed"
+    | "preparing"
+    | "ready"
+    | "delivered"
+    | "cancelled";
+  type: "room_service" | "restaurant" | "takeaway";
   orderDate: string;
   estimatedDeliveryTime?: string;
   actualDeliveryTime?: string;
   specialInstructions?: string;
-  paymentStatus: 'pending' | 'paid' | 'failed';
+  paymentStatus: "pending" | "paid" | "failed";
   createdAt: string;
   updatedAt: string;
 }
@@ -91,26 +124,28 @@ interface OrderForm {
     quantity: number;
     specialInstructions: string;
   }[];
-  type: 'room_service' | 'restaurant' | 'takeaway';
+  type: "room_service" | "restaurant" | "takeaway";
   specialInstructions: string;
 }
 
 const statusColors = {
-  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-  confirmed: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  preparing: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-  ready: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  delivered: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
-  cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+  pending:
+    "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+  confirmed: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  preparing:
+    "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+  ready: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  delivered: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+  cancelled: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
 };
 
 const statusLabels = {
-  pending: 'Pending',
-  confirmed: 'Confirmed',
-  preparing: 'Preparing',
-  ready: 'Ready',
-  delivered: 'Delivered',
-  cancelled: 'Cancelled'
+  pending: "Pending",
+  confirmed: "Confirmed",
+  preparing: "Preparing",
+  ready: "Ready",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
 };
 
 export default function OrdersPage() {
@@ -118,9 +153,9 @@ export default function OrdersPage() {
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
   const [guests, setGuests] = useState<Guest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -142,17 +177,17 @@ export default function OrdersPage() {
     todaysOrders: 0,
     todaysRevenue: 0,
     avgOrderValue: 0,
-    completionRate: '0%',
-    period: 'today'
+    completionRate: "0%",
+    period: "today",
   });
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
 
   const [orderForm, setOrderForm] = useState<OrderForm>({
-    guestId: '',
-    items: [{ foodId: '', quantity: 1, specialInstructions: '' }],
-    type: 'room_service',
-    specialInstructions: ''
+    guestId: "",
+    items: [{ foodId: "", quantity: 1, specialInstructions: "" }],
+    type: "room_service",
+    specialInstructions: "",
   });
 
   useEffect(() => {
@@ -239,19 +274,23 @@ export default function OrdersPage() {
 
   const fetchFoodItems = async () => {
     try {
-      const response = await apiClient.get('/food');
-      setFoodItems(response.data.data.filter((item: FoodItem) => item.isAvailable));
+      const response = await apiClient.get("/food");
+      setFoodItems(
+        response.data.data.filter((item: FoodItem) => item.isAvailable)
+      );
     } catch (error) {
-      console.error('Error fetching food items:', error);
+      console.error("Error fetching food items:", error);
     }
   };
 
   const fetchGuests = async () => {
     try {
-      const response = await apiClient.get('/guests');
-      setGuests(response.data.data.filter((guest: any) => guest.status === 'checked_in'));
+      const response = await apiClient.get("/guests");
+      setGuests(
+        response.data.data.filter((guest: any) => guest.status === "checked_in")
+      );
     } catch (error) {
-      console.error('Error fetching guests:', error);
+      console.error("Error fetching guests:", error);
     }
   };
 
@@ -259,11 +298,11 @@ export default function OrdersPage() {
     try {
       setStatsLoading(true);
       setStatsError(null);
-      const response = await apiClient.get('/orders/stats');
-      
+      const response = await apiClient.get("/orders/stats");
+
       // Handle the API response structure properly
       const statsData = response.data.data;
-      
+
       // Ensure all status types are present with default values
       const defaultStatus = { count: 0, totalAmount: 0 };
       setStats({
@@ -278,12 +317,12 @@ export default function OrdersPage() {
         todaysOrders: statsData.todaysOrders || 0,
         todaysRevenue: statsData.todaysRevenue || 0,
         avgOrderValue: statsData.avgOrderValue || 0,
-        completionRate: statsData.completionRate || '0%',
-        period: statsData.period || 'today'
+        completionRate: statsData.completionRate || "0%",
+        period: statsData.period || "today",
       });
     } catch (error) {
-      console.error('Error fetching stats:', error);
-      setStatsError('Failed to load statistics');
+      console.error("Error fetching stats:", error);
+      setStatsError("Failed to load statistics");
       // Set default stats on error
       setStats({
         totalOrders: 0,
@@ -297,8 +336,8 @@ export default function OrdersPage() {
         todaysOrders: 0,
         todaysRevenue: 0,
         avgOrderValue: 0,
-        completionRate: '0%',
-        period: 'today'
+        completionRate: "0%",
+        period: "today",
       });
     } finally {
       setStatsLoading(false);
@@ -308,44 +347,46 @@ export default function OrdersPage() {
   const handleCreateOrder = async () => {
     try {
       setIsLoading(true);
-      const validItems = orderForm.items.filter(item => item.foodId && item.quantity > 0);
+      const validItems = orderForm.items.filter(
+        (item) => item.foodId && item.quantity > 0
+      );
       if (validItems.length === 0) {
-        toast.error('Please add at least one item to the order');
+        toast.error("Please add at least one item to the order");
         return;
       }
 
       if (!orderForm.guestId) {
-        toast.error('Please select a guest');
+        toast.error("Please select a guest");
         return;
       }
 
-      const response = await apiClient.post('/orders', {
+      const response = await apiClient.post("/orders", {
         ...orderForm,
-        items: validItems
+        items: validItems,
       });
-      
+
       if (response.data.success) {
-        toast.success('Order created successfully!');
+        toast.success("Order created successfully!");
         setIsCreateDialogOpen(false);
         resetOrderForm();
         fetchOrders(pagination.current, searchTerm, statusFilter, typeFilter);
         fetchStats();
       } else {
-        toast.error(response.data.message || 'Failed to create order');
+        toast.error(response.data.message || "Failed to create order");
       }
     } catch (error: any) {
-      console.error('Error creating order:', error);
-      
+      console.error("Error creating order:", error);
+
       // Better error handling
-      let errorMessage = 'Failed to create order';
+      let errorMessage = "Failed to create order";
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.response?.data?.errors) {
-        errorMessage = error.response.data.errors.join(', ');
+        errorMessage = error.response.data.errors.join(", ");
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -355,34 +396,45 @@ export default function OrdersPage() {
   const handleUpdateOrderStatus = async (orderId: string, status: string) => {
     try {
       await apiClient.patch(`/orders/${orderId}/status`, { status });
-      toast.success('Order status updated successfully!');
+      toast.success("Order status updated successfully!");
       fetchOrders(pagination.current, searchTerm, statusFilter, typeFilter);
       fetchStats();
     } catch (error: any) {
-      console.error('Error updating order status:', error);
-      toast.error(error.response?.data?.message || 'Failed to update order status');
+      console.error("Error updating order status:", error);
+      toast.error(
+        error.response?.data?.message || "Failed to update order status"
+      );
     }
   };
 
   const resetOrderForm = () => {
     setOrderForm({
-      guestId: '',
-      items: [{ foodId: '', quantity: 1, specialInstructions: '' }],
-      type: 'room_service',
-      specialInstructions: ''
+      guestId: "",
+      items: [{ foodId: "", quantity: 1, specialInstructions: "" }],
+      type: "room_service",
+      specialInstructions: "",
     });
   };
 
   const addOrderItem = () => {
     setOrderForm({
       ...orderForm,
-      items: [...orderForm.items, { foodId: '', quantity: 1, specialInstructions: '' }]
+      items: [
+        ...orderForm.items,
+        { foodId: "", quantity: 1, specialInstructions: "" },
+      ],
     });
   };
 
   const removeOrderItem = (index: number) => {
     const newItems = orderForm.items.filter((_, i) => i !== index);
-    setOrderForm({ ...orderForm, items: newItems.length > 0 ? newItems : [{ foodId: '', quantity: 1, specialInstructions: '' }] });
+    setOrderForm({
+      ...orderForm,
+      items:
+        newItems.length > 0
+          ? newItems
+          : [{ foodId: "", quantity: 1, specialInstructions: "" }],
+    });
   };
 
   const updateOrderItem = (index: number, field: string, value: any) => {
@@ -413,7 +465,11 @@ export default function OrdersPage() {
 
   const getStatusBadge = (status: string) => {
     return (
-      <Badge className={`${statusColors[status as keyof typeof statusColors]} rounded-sm`}>
+      <Badge
+        className={`${
+          statusColors[status as keyof typeof statusColors]
+        } rounded-sm`}
+      >
         {statusLabels[status as keyof typeof statusLabels]}
       </Badge>
     );
@@ -421,20 +477,23 @@ export default function OrdersPage() {
 
   const getNextStatus = (currentStatus: string) => {
     const statusFlow = {
-      pending: 'confirmed',
-      confirmed: 'preparing',
-      preparing: 'ready',
-      ready: 'delivered'
+      pending: "confirmed",
+      confirmed: "preparing",
+      preparing: "ready",
+      ready: "delivered",
     };
     return statusFlow[currentStatus as keyof typeof statusFlow];
   };
 
   const canAdvanceStatus = (status: string) => {
-    return ['pending', 'confirmed', 'preparing', 'ready'].includes(status);
+    return ["pending", "confirmed", "preparing", "ready"].includes(status);
   };
 
   // Safe date formatting function
-  const formatDateSafely = (dateString: string | undefined, fallbackDate?: string) => {
+  const formatDateSafely = (
+    dateString: string | undefined,
+    fallbackDate?: string
+  ) => {
     try {
       if (dateString) {
         const date = new Date(dateString);
@@ -448,10 +507,10 @@ export default function OrdersPage() {
           return formatDistanceToNow(fallback, { addSuffix: true });
         }
       }
-      return 'Recently';
+      return "Recently";
     } catch (error) {
-      console.error('Date formatting error:', error);
-      return 'Recently';
+      console.error("Date formatting error:", error);
+      return "Recently";
     }
   };
 
@@ -513,7 +572,6 @@ export default function OrdersPage() {
         </Card>
       </div>
 
-
       {/* Actions and Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
@@ -531,13 +589,48 @@ export default function OrdersPage() {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 rounded-sm">
-              <SelectItem value="all" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">All Status</SelectItem>
-              <SelectItem value="pending" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">Pending</SelectItem>
-              <SelectItem value="confirmed" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">Confirmed</SelectItem>
-              <SelectItem value="preparing" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">Preparing</SelectItem>
-              <SelectItem value="ready" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">Ready</SelectItem>
-              <SelectItem value="delivered" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">Delivered</SelectItem>
-              <SelectItem value="cancelled" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">Cancelled</SelectItem>
+              <SelectItem
+                value="all"
+                className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+              >
+                All Status
+              </SelectItem>
+              <SelectItem
+                value="pending"
+                className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+              >
+                Pending
+              </SelectItem>
+              <SelectItem
+                value="confirmed"
+                className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+              >
+                Confirmed
+              </SelectItem>
+              <SelectItem
+                value="preparing"
+                className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+              >
+                Preparing
+              </SelectItem>
+              <SelectItem
+                value="ready"
+                className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+              >
+                Ready
+              </SelectItem>
+              <SelectItem
+                value="delivered"
+                className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+              >
+                Delivered
+              </SelectItem>
+              <SelectItem
+                value="cancelled"
+                className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+              >
+                Cancelled
+              </SelectItem>
             </SelectContent>
           </Select>
           <Select value={typeFilter} onValueChange={handleTypeFilterChange}>
@@ -545,14 +638,34 @@ export default function OrdersPage() {
               <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
             <SelectContent className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 rounded-sm">
-              <SelectItem value="all" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">All Types</SelectItem>
-              <SelectItem value="room_service" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">Room Service</SelectItem>
-              <SelectItem value="restaurant" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">Restaurant</SelectItem>
-              <SelectItem value="takeaway" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">Takeaway</SelectItem>
+              <SelectItem
+                value="all"
+                className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+              >
+                All Types
+              </SelectItem>
+              <SelectItem
+                value="room_service"
+                className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+              >
+                Room Service
+              </SelectItem>
+              <SelectItem
+                value="restaurant"
+                className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+              >
+                Restaurant
+              </SelectItem>
+              <SelectItem
+                value="takeaway"
+                className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+              >
+                Takeaway
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
-        
+
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 rounded-sm">
@@ -562,7 +675,9 @@ export default function OrdersPage() {
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
             <DialogHeader>
-              <DialogTitle className="text-black dark:text-white">Create New Order</DialogTitle>
+              <DialogTitle className="text-black dark:text-white">
+                Create New Order
+              </DialogTitle>
               <DialogDescription className="text-black dark:text-white opacity-70">
                 Create a new food order for a guest.
               </DialogDescription>
@@ -570,30 +685,70 @@ export default function OrdersPage() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="guest" className="text-black dark:text-white">Guest *</Label>
-                  <Select value={orderForm.guestId} onValueChange={(value) => setOrderForm({...orderForm, guestId: value})}>
+                  <Label htmlFor="guest" className="text-black dark:text-white">
+                    Guest *
+                  </Label>
+                  <Select
+                    value={orderForm.guestId}
+                    onValueChange={(value) =>
+                      setOrderForm({ ...orderForm, guestId: value })
+                    }
+                  >
                     <SelectTrigger className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm">
                       <SelectValue placeholder="Select guest" />
                     </SelectTrigger>
                     <SelectContent className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 rounded-sm">
                       {guests.map((guest) => (
-                        <SelectItem key={guest._id} value={guest._id} className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">
-                          {guest.name} - Room {(guest as any).room?.number || 'No Room'}
+                        <SelectItem
+                          key={guest._id}
+                          value={guest._id}
+                          className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+                        >
+                          {guest.name} - Room{" "}
+                          {(guest as any).room?.number || "No Room"}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="type" className="text-black dark:text-white">Order Type *</Label>
-                  <Select value={orderForm.type} onValueChange={(value) => setOrderForm({...orderForm, type: value as 'room_service' | 'restaurant' | 'takeaway'})}>
+                  <Label htmlFor="type" className="text-black dark:text-white">
+                    Order Type *
+                  </Label>
+                  <Select
+                    value={orderForm.type}
+                    onValueChange={(value) =>
+                      setOrderForm({
+                        ...orderForm,
+                        type: value as
+                          | "room_service"
+                          | "restaurant"
+                          | "takeaway",
+                      })
+                    }
+                  >
                     <SelectTrigger className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm">
                       <SelectValue placeholder="Select order type" />
                     </SelectTrigger>
                     <SelectContent className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 rounded-sm">
-                      <SelectItem value="room_service" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">Room Service</SelectItem>
-                      <SelectItem value="restaurant" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">Restaurant</SelectItem>
-                      <SelectItem value="takeaway" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">Takeaway</SelectItem>
+                      <SelectItem
+                        value="room_service"
+                        className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+                      >
+                        Room Service
+                      </SelectItem>
+                      <SelectItem
+                        value="restaurant"
+                        className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+                      >
+                        Restaurant
+                      </SelectItem>
+                      <SelectItem
+                        value="takeaway"
+                        className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+                      >
+                        Takeaway
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -601,27 +756,46 @@ export default function OrdersPage() {
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-black dark:text-white">Order Items *</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={addOrderItem} className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900 rounded-sm">
+                  <Label className="text-black dark:text-white">
+                    Order Items *
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addOrderItem}
+                    className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900 rounded-sm"
+                  >
                     <Plus className="h-4 w-4 mr-1" />
                     Add Item
                   </Button>
                 </div>
-                
+
                 {orderForm.items.map((item, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border border-gray-200 dark:border-gray-800 rounded-sm bg-gray-50 dark:bg-gray-950">
+                  <div
+                    key={index}
+                    className="grid grid-cols-12 gap-2 items-end p-3 border border-gray-200 dark:border-gray-800 rounded-sm bg-gray-50 dark:bg-gray-950"
+                  >
                     <div className="col-span-5">
-                      <Label className="text-sm text-black dark:text-white">Food Item</Label>
-                      <Select 
-                        value={item.foodId} 
-                        onValueChange={(value) => updateOrderItem(index, 'foodId', value)}
+                      <Label className="text-sm text-black dark:text-white">
+                        Food Item
+                      </Label>
+                      <Select
+                        value={item.foodId}
+                        onValueChange={(value) =>
+                          updateOrderItem(index, "foodId", value)
+                        }
                       >
                         <SelectTrigger className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm">
                           <SelectValue placeholder="Select food item" />
                         </SelectTrigger>
                         <SelectContent className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 rounded-sm">
                           {foodItems.map((food) => (
-                            <SelectItem key={food._id} value={food._id} className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">
+                            <SelectItem
+                              key={food._id}
+                              value={food._id}
+                              className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+                            >
                               {food.name} - ₹{food.price}
                             </SelectItem>
                           ))}
@@ -629,20 +803,36 @@ export default function OrdersPage() {
                       </Select>
                     </div>
                     <div className="col-span-2">
-                      <Label className="text-sm text-black dark:text-white">Quantity</Label>
+                      <Label className="text-sm text-black dark:text-white">
+                        Quantity
+                      </Label>
                       <Input
                         type="number"
                         min="1"
                         value={item.quantity}
-                        onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                        onChange={(e) =>
+                          updateOrderItem(
+                            index,
+                            "quantity",
+                            parseInt(e.target.value) || 1
+                          )
+                        }
                         className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm"
                       />
                     </div>
                     <div className="col-span-4">
-                      <Label className="text-sm text-black dark:text-white">Special Instructions</Label>
+                      <Label className="text-sm text-black dark:text-white">
+                        Special Instructions
+                      </Label>
                       <Input
                         value={item.specialInstructions}
-                        onChange={(e) => updateOrderItem(index, 'specialInstructions', e.target.value)}
+                        onChange={(e) =>
+                          updateOrderItem(
+                            index,
+                            "specialInstructions",
+                            e.target.value
+                          )
+                        }
                         placeholder="Optional..."
                         className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm"
                       />
@@ -665,22 +855,40 @@ export default function OrdersPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="specialInstructions" className="text-black dark:text-white">Order Special Instructions</Label>
+                <Label
+                  htmlFor="specialInstructions"
+                  className="text-black dark:text-white"
+                >
+                  Order Special Instructions
+                </Label>
                 <Input
                   id="specialInstructions"
                   value={orderForm.specialInstructions}
-                  onChange={(e) => setOrderForm({...orderForm, specialInstructions: e.target.value})}
+                  onChange={(e) =>
+                    setOrderForm({
+                      ...orderForm,
+                      specialInstructions: e.target.value,
+                    })
+                  }
                   placeholder="Any special instructions for the entire order..."
                   className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm"
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900 rounded-sm">
+              <Button
+                variant="outline"
+                onClick={() => setIsCreateDialogOpen(false)}
+                className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900 rounded-sm"
+              >
                 Cancel
               </Button>
-              <Button onClick={handleCreateOrder} disabled={isLoading} className="bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 rounded-sm">
-                {isLoading ? 'Creating...' : 'Create Order'}
+              <Button
+                onClick={handleCreateOrder}
+                disabled={isLoading}
+                className="bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 rounded-sm"
+              >
+                {isLoading ? "Creating..." : "Create Order"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -766,30 +974,20 @@ export default function OrdersPage() {
                     </TableCell>
                     <TableCell className="text-black dark:text-white">
                       ₹{order.totalAmount}
-                      <div className="text-xs text-black dark:text-white opacity-70">
-                        {order.items.length} item{order.items.length > 1 ? 's' : ''}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setIsViewDialogOpen(true);
-                          }}
-                          className="h-5 w-5 p-0 ml-1 text-black dark:text-white hover:bg-transparent"
-                        >
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                      </div>
                     </TableCell>
                     <TableCell className="text-black dark:text-white">
-                      {formatDateSafely(order.orderDate, order.createdAt || order.updatedAt)}
+                      {formatDateSafely(
+                        order.orderDate,
+                        order.createdAt || order.updatedAt
+                      )}
                     </TableCell>
+                    <TableCell>{getStatusBadge(order.status)}</TableCell>
                     <TableCell>
-                      {getStatusBadge(order.status)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="capitalize bg-gray-100 dark:bg-gray-900 text-black dark:text-white border-gray-200 dark:border-gray-800 rounded-sm">
-                        {order.type.replace('_', ' ')}
+                      <Badge
+                        variant="secondary"
+                        className="capitalize bg-gray-100 dark:bg-gray-900 text-black dark:text-white border-gray-200 dark:border-gray-800 rounded-sm"
+                      >
+                        {order.type.replace("_", " ")}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -809,26 +1007,38 @@ export default function OrdersPage() {
                           <Button
                             variant="default"
                             size="sm"
-                            onClick={() => handleUpdateOrderStatus(order._id, getNextStatus(order.status)!)}
+                            onClick={() =>
+                              handleUpdateOrderStatus(
+                                order._id,
+                                getNextStatus(order.status)!
+                              )
+                            }
                             className="bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 rounded-sm"
                           >
                             <CheckCircle className="h-4 w-4 mr-1" />
-                            {getNextStatus(order.status) === 'confirmed' && 'Confirm'}
-                            {getNextStatus(order.status) === 'preparing' && 'Start Preparing'}
-                            {getNextStatus(order.status) === 'ready' && 'Mark Ready'}
-                            {getNextStatus(order.status) === 'delivered' && 'Mark Delivered'}
+                            {getNextStatus(order.status) === "confirmed" &&
+                              "Confirm"}
+                            {getNextStatus(order.status) === "preparing" &&
+                              "Start Preparing"}
+                            {getNextStatus(order.status) === "ready" &&
+                              "Mark Ready"}
+                            {getNextStatus(order.status) === "delivered" &&
+                              "Mark Delivered"}
                           </Button>
                         )}
-                        {order.status !== 'delivered' && order.status !== 'cancelled' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleUpdateOrderStatus(order._id, 'cancelled')}
-                            className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded-sm"
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        )}
+                        {order.status !== "delivered" &&
+                          order.status !== "cancelled" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                handleUpdateOrderStatus(order._id, "cancelled")
+                              }
+                              className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded-sm"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -853,7 +1063,9 @@ export default function OrdersPage() {
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-2xl bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
           <DialogHeader>
-            <DialogTitle className="text-black dark:text-white">Order Details</DialogTitle>
+            <DialogTitle className="text-black dark:text-white">
+              Order Details
+            </DialogTitle>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4">
@@ -864,10 +1076,12 @@ export default function OrdersPage() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Status</Label>
-                  <div className="mt-1">{getStatusBadge(selectedOrder.status)}</div>
+                  <div className="mt-1">
+                    {getStatusBadge(selectedOrder.status)}
+                  </div>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium">Guest</Label>
@@ -882,11 +1096,15 @@ export default function OrdersPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium">Order Type</Label>
-                  <p className="text-sm capitalize">{selectedOrder.type.replace('_', ' ')}</p>
+                  <p className="text-sm capitalize">
+                    {selectedOrder.type.replace("_", " ")}
+                  </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Total Amount</Label>
-                  <p className="text-sm font-semibold">₹{selectedOrder.totalAmount}</p>
+                  <p className="text-sm font-semibold">
+                    ₹{selectedOrder.totalAmount}
+                  </p>
                 </div>
               </div>
 
@@ -894,16 +1112,24 @@ export default function OrdersPage() {
                 <Label className="text-sm font-medium">Order Items</Label>
                 <div className="mt-2 space-y-2">
                   {selectedOrder.items.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                    <div
+                      key={index}
+                      className="flex justify-between items-center p-2 bg-gray-50 rounded"
+                    >
                       <div>
                         <span className="font-medium">
-                          {item.quantity}x {item.food?.name || item.foodName || 'Unknown Item'}
+                          {item.quantity}x{" "}
+                          {item.food?.name || item.foodName || "Unknown Item"}
                         </span>
                         {item.specialInstructions && (
-                          <p className="text-xs text-muted-foreground">Note: {item.specialInstructions}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Note: {item.specialInstructions}
+                          </p>
                         )}
                       </div>
-                      <span className="font-medium">₹{item.price || item.unitPrice || 0}</span>
+                      <span className="font-medium">
+                        ₹{item.price || item.unitPrice || 0}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -913,15 +1139,22 @@ export default function OrdersPage() {
                 <div>
                   <Label className="text-sm font-medium">Order Date</Label>
                   <p className="text-sm">
-                    {selectedOrder.orderDate ? 
-                      new Date(selectedOrder.orderDate).toLocaleString() :
-                      new Date(selectedOrder.createdAt || selectedOrder.updatedAt).toLocaleString()
-                    }
+                    {selectedOrder.orderDate
+                      ? new Date(selectedOrder.orderDate).toLocaleString()
+                      : new Date(
+                          selectedOrder.createdAt || selectedOrder.updatedAt
+                        ).toLocaleString()}
                   </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Payment Status</Label>
-                  <Badge variant={selectedOrder.paymentStatus === 'paid' ? 'default' : 'secondary'}>
+                  <Badge
+                    variant={
+                      selectedOrder.paymentStatus === "paid"
+                        ? "default"
+                        : "secondary"
+                    }
+                  >
                     {selectedOrder.paymentStatus}
                   </Badge>
                 </div>
@@ -929,7 +1162,9 @@ export default function OrdersPage() {
 
               {selectedOrder.specialInstructions && (
                 <div>
-                  <Label className="text-sm font-medium">Special Instructions</Label>
+                  <Label className="text-sm font-medium">
+                    Special Instructions
+                  </Label>
                   <p className="text-sm">{selectedOrder.specialInstructions}</p>
                 </div>
               )}

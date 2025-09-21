@@ -76,7 +76,19 @@ exports.tenantMiddleware = async (req, res, next) => {
     }
 
     // Get hotel data from main database
-    const mainConnection = databaseManager.getMainConnection();
+    let mainConnection;
+    try {
+      mainConnection = databaseManager.getMainConnection();
+    } catch (connectionError) {
+      console.error("Main database connection error:", connectionError.message);
+      return res.status(503).json({
+        success: false,
+        message:
+          "Database temporarily unavailable. Please try again in a moment.",
+        code: "DATABASE_UNAVAILABLE",
+      });
+    }
+
     const MainHotelModel = mainConnection.model(
       "MainHotel",
       require("../models/MainHotel").schema
@@ -123,11 +135,13 @@ exports.tenantMiddleware = async (req, res, next) => {
     } catch (dbError) {
       console.error(
         `Database connection error for ${hotel.subdomain}:`,
-        dbError
+        dbError.message
       );
       return res.status(503).json({
         success: false,
-        error: "Hotel database temporarily unavailable",
+        message:
+          "Hotel database temporarily unavailable. Please try again in a moment.",
+        code: "DATABASE_UNAVAILABLE",
       });
     }
 
@@ -136,10 +150,15 @@ exports.tenantMiddleware = async (req, res, next) => {
     console.error("Tenant middleware error:", error);
 
     // If it's a database connection error, return a specific error
-    if (error.message.includes("Failed to connect to tenant database")) {
+    if (
+      error.message.includes("database connection not ready") ||
+      error.message.includes("Failed to connect") ||
+      error.message.includes("connection not ready")
+    ) {
       return res.status(503).json({
         success: false,
-        message: "Hotel database temporarily unavailable",
+        message:
+          "Database temporarily unavailable. Please try again in a moment.",
         code: "DATABASE_UNAVAILABLE",
       });
     }
@@ -147,6 +166,7 @@ exports.tenantMiddleware = async (req, res, next) => {
     return res.status(500).json({
       success: false,
       message: "Internal server error in tenant setup",
+      code: "TENANT_SETUP_ERROR",
     });
   }
 };

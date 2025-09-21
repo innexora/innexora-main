@@ -3,6 +3,7 @@ const Room = require("../models/Room");
 const Bill = require("../models/Bill");
 const { body, validationResult } = require("express-validator");
 const ErrorResponse = require("../utils/errorResponse");
+const AutomaticBillingService = require("../services/automaticBillingService");
 
 // @desc    Get guest statistics
 // @route   GET /api/guests/stats
@@ -428,11 +429,22 @@ exports.checkInGuest = async (req, res, next) => {
     guestData.room = roomId;
     guestData.roomNumber = room.number;
     guestData.status = "checked_in";
+    
+    // Set actual check-in time to current time for real-world accuracy
+    guestData.checkInDate = new Date();
+    
+    // If check-out date is not provided or is in the past, set it to next day
+    if (!guestData.checkOutDate || new Date(guestData.checkOutDate) <= new Date()) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      guestData.checkOutDate = tomorrow;
+    }
 
     console.log("Creating guest with data:", {
       ...guestData,
       room: roomId,
       roomNumber: room.number,
+      actualCheckInTime: guestData.checkInDate,
     });
 
     // Create guest
@@ -446,16 +458,58 @@ exports.checkInGuest = async (req, res, next) => {
     // Generate a unique bill number
     const billNumber = `BIL-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    // Calculate room charges based on stay duration
-    const checkInDate = new Date(guest.checkInDate);
-    const checkOutDate = new Date(guest.checkOutDate);
-    const numberOfNights = Math.ceil(
-      (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)
-    );
-    const roomChargePerNight = room.price || 0;
-    const totalRoomCharge = numberOfNights * roomChargePerNight;
+    // Calculate automatic billing charges based on hotel policies
+    let billingCalculation;
+    let billItems = [];
+    
+    try {
+      billingCalculation = await AutomaticBillingService.calculateAutomaticBilling(
+        guest,
+        room,
+        req.subdomain
+      );
+      
+      // Generate billing items from the calculation
+      billItems = AutomaticBillingService.generateBillingItems(billingCalculation, room.number);
+      
+      console.log(`✅ Automatic billing calculated for guest ${guest.name}:`, {
+        totalCharges: billingCalculation.totalCharges,
+        baseCharges: billingCalculation.baseCharges,
+        earlyCheckinCharges: billingCalculation.earlyCheckinCharges,
+        lateCheckoutCharges: billingCalculation.lateCheckoutCharges,
+        policies: billingCalculation.policies,
+      });
+    } catch (billingError) {
+      console.error("Error calculating automatic billing:", billingError);
+      // Fallback to basic room charges if automatic billing fails
+      const checkInDate = new Date(guest.checkInDate);
+      const checkOutDate = new Date(guest.checkOutDate);
+      const numberOfNights = Math.ceil(
+        (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)
+      );
+      const roomChargePerNight = room.price || 0;
+      const totalRoomCharge = numberOfNights * roomChargePerNight;
+      
+      billItems = [{
+        type: "room_charge",
+        description: `Room ${room.number} - ${numberOfNights} night(s)`,
+        amount: totalRoomCharge,
+        quantity: numberOfNights,
+        unitPrice: roomChargePerNight,
+        addedBy: "System",
+        date: new Date(),
+        notes: "Basic room charge (automatic billing failed)",
+      }];
+      
+      billingCalculation = {
+        totalCharges: totalRoomCharge,
+        baseCharges: totalRoomCharge,
+        earlyCheckinCharges: 0,
+        lateCheckoutCharges: 0,
+      };
+    }
 
-    // Create initial bill for the guest with room charges
+    // Create initial bill for the guest with automatic charges
     const billData = {
       guest: guest._id,
       room: room._id,
@@ -464,28 +518,18 @@ exports.checkInGuest = async (req, res, next) => {
       checkInDate: guest.checkInDate,
       checkOutDate: guest.checkOutDate,
       status: "active",
-      items: [
-        {
-          type: "room_charge",
-          description: `Room ${room.number} - ${numberOfNights} night(s)`,
-          amount: totalRoomCharge,
-          quantity: numberOfNights,
-          unitPrice: roomChargePerNight,
-          addedBy: "System",
-          date: new Date(),
-        },
-      ],
+      items: billItems,
       payments: [],
-      totalAmount: totalRoomCharge,
+      totalAmount: billingCalculation.totalCharges,
       taxAmount: 0,
       discountAmount: 0,
-      netAmount: totalRoomCharge,
-      balance: totalRoomCharge,
+      netAmount: billingCalculation.totalCharges,
+      balance: billingCalculation.totalCharges,
       billNumber: billNumber,
       isActive: true,
     };
 
-    console.log("Creating bill with data:", billData);
+    console.log("Creating bill with automatic billing data:", billData);
     const bill = await Bill.create(billData);
 
     // Manually attach room data to avoid any populate timeout issues
@@ -768,6 +812,32 @@ exports.updateGuest = async (req, res, next) => {
       }
     }
 
+    // If check-in or check-out dates were updated, recalculate billing
+    if (req.body.checkInDate || req.body.checkOutDate) {
+      try {
+        const Bill = req.tenantModels.Bill;
+        const bill = await Bill.findOne({
+          guest: guest._id,
+          status: { $in: ["active", "partially_paid", "paid"] },
+          isGuestCheckedOut: false,
+        });
+
+        if (bill) {
+          console.log(`Updating bill for guest ${guest.name} due to date changes`);
+          await AutomaticBillingService.updateBillWithAutomaticCharges(
+            bill,
+            guest,
+            room,
+            req.subdomain
+          );
+          console.log(`✅ Bill updated for guest ${guest.name}`);
+        }
+      } catch (billingError) {
+        console.error("Error updating bill after guest date change:", billingError);
+        // Don't fail the guest update if billing update fails
+      }
+    }
+
     res.status(200).json({
       success: true,
       data: guest,
@@ -993,6 +1063,78 @@ exports.getGuestCheckoutStatus = async (req, res, next) => {
   }
 };
 
+// @desc    Recalculate billing for a guest
+// @route   POST /api/guests/:id/recalculate-billing
+// @access  Private/Manager
+exports.recalculateGuestBilling = async (req, res, next) => {
+  try {
+    // Use tenant models - must exist for tenant domains
+    if (!req.tenantModels || !req.tenantModels.Guest) {
+      console.error("Tenant models not available:", req.tenantModels);
+      return res.status(500).json({
+        success: false,
+        error: "Tenant database not properly initialized",
+      });
+    }
+    const Guest = req.tenantModels.Guest;
+    const Room = req.tenantModels.Room;
+    const Bill = req.tenantModels.Bill;
+
+    const guest = await Guest.findById(req.params.id);
+    if (!guest) {
+      return next(new ErrorResponse("Guest not found", 404));
+    }
+
+    if (guest.status !== "checked_in") {
+      return res.status(400).json({
+        success: false,
+        message: "Guest must be checked in to recalculate billing",
+      });
+    }
+
+    // Get room information
+    const room = await Room.findById(guest.room);
+    if (!room) {
+      return next(new ErrorResponse("Room not found", 404));
+    }
+
+    // Find active bill
+    const bill = await Bill.findOne({
+      guest: guest._id,
+      status: { $in: ["active", "partially_paid", "paid"] },
+      isGuestCheckedOut: false,
+    });
+
+    if (!bill) {
+      return res.status(404).json({
+        success: false,
+        message: "No active bill found for this guest",
+      });
+    }
+
+    // Update bill with automatic charges
+    const result = await AutomaticBillingService.updateBillWithAutomaticCharges(
+      bill,
+      guest,
+      room,
+      req.subdomain
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Billing recalculated successfully",
+      data: {
+        guest: guest,
+        bill: result.bill,
+        billingCalculation: result.billingCalculation,
+      },
+    });
+  } catch (error) {
+    console.error("Recalculate guest billing error:", error);
+    next(new ErrorResponse("Server error", 500));
+  }
+};
+
 // @desc    Create a new guest
 // @route   POST /api/guests
 // @access  Private/Manager
@@ -1051,7 +1193,8 @@ exports.createGuest = async (req, res, next) => {
     const guestData = {
       ...req.body,
       status: "checked_in",
-      checkInDate: new Date(req.body.checkInDate),
+      // Set actual check-in time to current time for real-world accuracy
+      checkInDate: new Date(),
       checkOutDate: new Date(req.body.checkOutDate),
     };
 

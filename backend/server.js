@@ -1,6 +1,7 @@
 const app = require("./app");
 const http = require("http");
 const { Server } = require("socket.io");
+const backgroundBillingService = require('./services/backgroundBillingService');
 // Remove automatic startup of cleanup services - they need tenant context
 // const ticketCleanupService = require('./services/ticketCleanupService');
 // const roomCleanupService = require('./services/roomCleanupService');
@@ -53,6 +54,9 @@ app.set("io", io);
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);
 
+  // Start background billing service for automatic calculations
+  backgroundBillingService.start();
+
   // Cleanup services are disabled in multi-tenant mode
   // They need tenant context to work properly
   // ticketCleanupService.start();
@@ -80,6 +84,10 @@ process.on("uncaughtException", (err) => {
 // Handle SIGTERM
 process.on("SIGTERM", () => {
   console.log("👋 SIGTERM RECEIVED. Shutting down gracefully");
+  
+  // Stop background billing service
+  backgroundBillingService.stop();
+  
   // Cleanup services are disabled in multi-tenant mode
   // ticketCleanupService.stop();
   // roomCleanupService.stop();

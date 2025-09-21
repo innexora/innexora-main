@@ -39,6 +39,11 @@ exports.getHotelInfo = async (req, res) => {
       currency: req.hotel.currency,
       check_in_time: req.hotel.check_in_time,
       check_out_time: req.hotel.check_out_time,
+      // Add billing policy fields
+      standard_checkin_time: req.hotel.standard_checkin_time,
+      standard_checkout_time: req.hotel.standard_checkout_time,
+      early_checkin_policy: req.hotel.early_checkin_policy,
+      late_checkout_policy: req.hotel.late_checkout_policy,
       stars_rating: req.hotel.stars_rating,
       amenities: req.hotel.amenities,
       policy: req.hotel.policy,

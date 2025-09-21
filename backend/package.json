@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{js,jsx,json,md}\"",
     "seed": "node utils/seed.js",
-    "seed:main": "node utils/seedMainDb.js"
+    "seed:main": "node utils/seedMainDb.js",
+    "seed:admin": "node utils/seedAdminUser.js"
   },
   "keywords": [
     "hotel",

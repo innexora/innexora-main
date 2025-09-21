@@ -64,4 +64,8 @@ router
     guestController.getGuestCheckoutStatus
   );
 
+router
+  .route("/:id/recalculate-billing")
+  .post(authorize("manager", "admin"), guestController.recalculateGuestBilling);
+
 module.exports = router;

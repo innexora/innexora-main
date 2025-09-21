@@ -104,7 +104,6 @@ interface CheckInForm {
   phone: string;
   idType: string;
   idNumber: string;
-  checkInDate: string;
   checkOutDate: string;
   numberOfGuests: number;
   roomId: string;
@@ -152,7 +151,6 @@ export default function GuestsPage() {
     phone: "",
     idType: "passport",
     idNumber: "",
-    checkInDate: new Date().toISOString().split("T")[0],
     checkOutDate: new Date(Date.now() + 24 * 60 * 60 * 1000)
       .toISOString()
       .split("T")[0],
@@ -318,7 +316,6 @@ export default function GuestsPage() {
       phone: "",
       idType: "passport",
       idNumber: "",
-      checkInDate: new Date().toISOString().split("T")[0],
       checkOutDate: new Date(Date.now() + 24 * 60 * 60 * 1000)
         .toISOString()
         .split("T")[0],
@@ -477,7 +474,7 @@ export default function GuestsPage() {
                 Check In New Guest
               </DialogTitle>
               <DialogDescription className="text-black dark:text-white opacity-70 text-sm">
-                Fill in the guest details to complete check-in process.
+                Fill in the guest details to complete check-in process. Check-in time will be automatically set to current time.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -609,33 +606,13 @@ export default function GuestsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="checkInDate"
-                    className="text-black dark:text-white text-sm"
-                  >
-                    Check-in Date *
-                  </Label>
-                  <Input
-                    id="checkInDate"
-                    type="date"
-                    value={checkInForm.checkInDate}
-                    onChange={(e) =>
-                      setCheckInForm({
-                        ...checkInForm,
-                        checkInDate: e.target.value,
-                      })
-                    }
-                    className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm"
-                  />
-                </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label
                     htmlFor="checkOutDate"
                     className="text-black dark:text-white text-sm"
                   >
-                    Check-out Date *
+                    Expected Check-out Date *
                   </Label>
                   <Input
                     id="checkOutDate"
@@ -649,6 +626,9 @@ export default function GuestsPage() {
                     }
                     className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm"
                   />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Check-in time will be automatically set to current time
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label

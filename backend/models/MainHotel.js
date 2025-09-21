@@ -131,23 +131,33 @@ const hotelSchema = new mongoose.Schema(
       maxlength: [3, "Currency code must be 3 characters"],
       match: [/^[A-Z]{3}$/, "Currency must be a valid 3-letter code"],
     },
-    check_in_time: {
-      type: String,
-      trim: true,
-      default: "14:00",
-      match: [
-        /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/,
-        "Please enter time in HH:MM format",
-      ],
+    standard_checkin_time: {
+      type: Number,
+      min: [0, "Check-in time must be between 0 and 23"],
+      max: [23, "Check-in time must be between 0 and 23"],
+      default: 14,
     },
-    check_out_time: {
+    standard_checkout_time: {
+      type: Number,
+      min: [0, "Check-out time must be between 0 and 23"],
+      max: [23, "Check-out time must be between 0 and 23"],
+      default: 12,
+    },
+    early_checkin_policy: {
       type: String,
-      trim: true,
-      default: "11:00",
-      match: [
-        /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/,
-        "Please enter time in HH:MM format",
-      ],
+      enum: {
+        values: ["free", "half_rate", "full_rate"],
+        message: "Early check-in policy must be free, half_rate, or full_rate",
+      },
+      default: "half_rate",
+    },
+    late_checkout_policy: {
+      type: String,
+      enum: {
+        values: ["free", "half_rate", "full_rate"],
+        message: "Late check-out policy must be free, half_rate, or full_rate",
+      },
+      default: "half_rate",
     },
     stars_rating: {
       type: Number,

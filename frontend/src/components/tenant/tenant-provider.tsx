@@ -29,6 +29,10 @@ interface HotelInfo {
   currency: string;
   check_in_time: string;
   check_out_time: string;
+  standard_checkin_time?: number;
+  standard_checkout_time?: number;
+  early_checkin_policy?: "free" | "half_rate" | "full_rate";
+  late_checkout_policy?: "free" | "half_rate" | "full_rate";
   stars_rating: number;
   amenities: string[];
   policy: Record<string, string>;

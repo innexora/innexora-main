@@ -21,6 +21,7 @@ import {
   UserCheck,
   History,
   BarChart3,
+  Calculator,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,10 +50,14 @@ export default function DashboardLayout({
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Rooms", href: "/dashboard/rooms", icon: Building2 },
     { name: "Guests", href: "/dashboard/guests", icon: UserCheck },
-
     { name: "Food Menu", href: "/dashboard/food", icon: UtensilsCrossed },
     { name: "Orders", href: "/dashboard/orders", icon: Receipt },
     { name: "Bills", href: "/dashboard/bills", icon: Receipt },
+    {
+      name: "Billing Calculator",
+      href: "/dashboard/billing-calculator",
+      icon: Calculator,
+    },
     { name: "Service Requests", href: "/dashboard/tickets", icon: Ticket },
     { name: "Reports", href: "/dashboard/reports", icon: BarChart3 },
     { name: "Guest History", href: "/dashboard/guest-history", icon: History },

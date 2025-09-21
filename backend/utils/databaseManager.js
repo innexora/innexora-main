@@ -32,6 +32,9 @@ class DatabaseManager {
         heartbeatFrequencyMS: 10000,
       });
 
+      // Add connection event handlers
+      this.addConnectionHandlers(this.mainConnection, "main");
+
       // Wait for connection
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(
@@ -67,6 +70,13 @@ class DatabaseManager {
   // Get main database connection
   getMainConnection() {
     if (!this.mainConnection || this.mainConnection.readyState !== 1) {
+      console.warn(
+        "⚠️ Main database connection not ready, attempting to reconnect..."
+      );
+      // Don't throw error immediately, try to reconnect
+      this.initMainConnection().catch((err) => {
+        console.error("❌ Failed to reconnect main database:", err.message);
+      });
       throw new Error("Main database connection not ready");
     }
     return this.mainConnection;
@@ -91,7 +101,7 @@ class DatabaseManager {
     try {
       // Use MONGODB_TENANT_URI for all tenant databases with hotel-specific database name
       const tenantUri = process.env.MONGODB_TENANT_URI;
-      
+
       if (!tenantUri) {
         throw new Error("MONGODB_TENANT_URI environment variable is not set");
       }
@@ -110,7 +120,13 @@ class DatabaseManager {
         dbName: `hotel_${hotelSubdomain}`, // Each hotel gets its own database in the tenant cluster
       };
 
-      const connection = mongoose.createConnection(tenantUri, connectionOptions);
+      const connection = mongoose.createConnection(
+        tenantUri,
+        connectionOptions
+      );
+
+      // Add connection event handlers
+      this.addConnectionHandlers(connection, "tenant", hotelSubdomain);
 
       // Wait for connection
       await new Promise((resolve, reject) => {
@@ -135,7 +151,9 @@ class DatabaseManager {
       });
 
       this.connections.set(connectionKey, connection);
-      console.log(`✅ Tenant database connected for ${hotelSubdomain} using shared tenant cluster`);
+      console.log(
+        `✅ Tenant database connected for ${hotelSubdomain} using shared tenant cluster`
+      );
       return connection;
     } catch (error) {
       console.error(`❌ Tenant database error for ${hotelSubdomain}:`, error);
@@ -432,6 +450,52 @@ class DatabaseManager {
         })
       ),
     };
+  }
+
+  // Gracefully handle disconnections and attempt reconnect
+  async ensureConnection(type = "main", subdomain = null) {
+    try {
+      if (type === "main") {
+        if (!this.isConnectionHealthy(this.mainConnection)) {
+          console.log("🔄 Reconnecting main database...");
+          await this.initMainConnection();
+        }
+        return this.mainConnection;
+      } else if (type === "tenant" && subdomain) {
+        const connectionKey = `tenant_${subdomain}`;
+        const existing = this.connections.get(connectionKey);
+        if (!this.isConnectionHealthy(existing)) {
+          console.log(`🔄 Reconnecting tenant database for ${subdomain}...`);
+          await this.getTenantConnection(subdomain);
+        }
+        return this.connections.get(connectionKey);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to ensure ${type} connection:`, error.message);
+      throw error;
+    }
+  }
+
+  // Add connection event handlers for better monitoring
+  addConnectionHandlers(connection, type, subdomain = null) {
+    const identifier = subdomain ? `${type}_${subdomain}` : type;
+
+    connection.on("connected", () => {
+      console.log(`✅ ${identifier} database connected`);
+    });
+
+    connection.on("error", (err) => {
+      console.error(`❌ ${identifier} database error:`, err.message);
+    });
+
+    connection.on("disconnected", () => {
+      console.warn(`⚠️ ${identifier} database disconnected`);
+      // Don't automatically reconnect here to avoid connection storms
+    });
+
+    connection.on("reconnected", () => {
+      console.log(`🔄 ${identifier} database reconnected`);
+    });
   }
 }
 
