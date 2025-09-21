@@ -16,8 +16,11 @@ class AutomaticBillingService {
     try {
       // Get hotel policies from main database using database manager
       const mainConnection = databaseManager.getMainConnection();
-      const MainHotel = mainConnection.model("MainHotel", require("../models/MainHotel").schema);
-      
+      const MainHotel = mainConnection.model(
+        "MainHotel",
+        require("../models/MainHotel").schema
+      );
+
       const hotel = await MainHotel.findOne({ subdomain: hotelSubdomain });
       if (!hotel) {
         throw new Error(`Hotel with subdomain ${hotelSubdomain} not found`);
@@ -56,7 +59,8 @@ class AutomaticBillingService {
       );
 
       // Calculate total
-      const totalCharges = baseCharges + earlyCheckinCharges + lateCheckoutCharges;
+      const totalCharges =
+        baseCharges + earlyCheckinCharges + lateCheckoutCharges;
 
       return {
         baseCharges,
@@ -94,9 +98,8 @@ class AutomaticBillingService {
   static calculateNights(checkInDate, checkOutDate) {
     const timeDiff = checkOutDate.getTime() - checkInDate.getTime();
     const days = timeDiff / (1000 * 60 * 60 * 24);
-    // For hotel billing, we count complete nights, not partial days
-    // If it's less than 24 hours, it's still 1 night
-    return Math.max(1, Math.floor(days));
+    // Use ceiling to properly count nights like the frontend
+    return Math.max(1, Math.ceil(days));
   }
 
   /**
@@ -107,10 +110,14 @@ class AutomaticBillingService {
    * @param {Number} roomPrice - Room price per night
    * @returns {Number} Early check-in charges
    */
-  static calculateEarlyCheckinCharges(checkInDate, standardCheckinTime, policy, roomPrice) {
-    const checkInHour = checkInDate.getUTCHours();
-    
-    
+  static calculateEarlyCheckinCharges(
+    checkInDate,
+    standardCheckinTime,
+    policy,
+    roomPrice
+  ) {
+    const checkInHour = checkInDate.getHours();
+
     // If check-in is at or after standard time, no early check-in charges
     if (checkInHour >= standardCheckinTime) {
       return 0;
@@ -146,10 +153,14 @@ class AutomaticBillingService {
    * @param {Number} roomPrice - Room price per night
    * @returns {Number} Late check-out charges
    */
-  static calculateLateCheckoutCharges(checkOutDate, standardCheckoutTime, policy, roomPrice) {
-    const checkOutHour = checkOutDate.getUTCHours();
-    
-    
+  static calculateLateCheckoutCharges(
+    checkOutDate,
+    standardCheckoutTime,
+    policy,
+    roomPrice
+  ) {
+    const checkOutHour = checkOutDate.getHours();
+
     // If check-out is at or before standard time, no late check-out charges
     if (checkOutHour <= standardCheckoutTime) {
       return 0;
@@ -260,22 +271,37 @@ class AutomaticBillingService {
    * @param {String} hotelSubdomain - Hotel subdomain
    * @returns {Object} Updated bill
    */
-  static async updateBillWithAutomaticCharges(bill, guest, room, hotelSubdomain) {
+  static async updateBillWithAutomaticCharges(
+    bill,
+    guest,
+    room,
+    hotelSubdomain
+  ) {
     try {
       // Calculate new automatic charges
-      const billingCalculation = await this.calculateAutomaticBilling(guest, room, hotelSubdomain);
-      
+      const billingCalculation = await this.calculateAutomaticBilling(
+        guest,
+        room,
+        hotelSubdomain
+      );
+
       // Remove existing automatic charges (room_charge and service_charge items added by System)
-      bill.items = bill.items.filter(item => 
-        !(item.addedBy === "System" && 
-          (item.type === "room_charge" || item.type === "service_charge") &&
-          (item.notes === "Automatic room charge" || 
-           (item.notes && item.notes.includes("Early check-in")) || 
-           (item.notes && item.notes.includes("Late check-out"))))
+      bill.items = bill.items.filter(
+        (item) =>
+          !(
+            item.addedBy === "System" &&
+            (item.type === "room_charge" || item.type === "service_charge") &&
+            (item.notes === "Automatic room charge" ||
+              (item.notes && item.notes.includes("Early check-in")) ||
+              (item.notes && item.notes.includes("Late check-out")))
+          )
       );
 
       // Add new automatic charges
-      const newItems = this.generateBillingItems(billingCalculation, room.number);
+      const newItems = this.generateBillingItems(
+        billingCalculation,
+        room.number
+      );
       bill.items.push(...newItems);
 
       // Update bill totals (this will be handled by the bill's pre-save middleware)

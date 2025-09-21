@@ -500,7 +500,10 @@ export default function DashboardPage() {
         {/* Stats Cards Skeleton */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
-            <Card key={i} className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
+            <Card
+              key={i}
+              className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm"
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <Skeleton className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded-sm" />
                 <Skeleton className="h-4 w-4 bg-gray-200 dark:bg-gray-800 rounded-sm" />
@@ -524,7 +527,10 @@ export default function DashboardPage() {
         {/* Kanban Board Skeleton */}
         <div className="flex gap-6 overflow-x-auto pb-4 h-[calc(100vh-400px)]">
           {[...Array(3)].map((_, i) => (
-            <Card key={i} className="h-full min-w-[300px] bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
+            <Card
+              key={i}
+              className="h-full min-w-[300px] bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm"
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <Skeleton className="h-6 w-32 bg-gray-200 dark:bg-gray-800 rounded-sm" />
@@ -533,7 +539,10 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {[...Array(3)].map((_, j) => (
-                  <Card key={j} className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
+                  <Card
+                    key={j}
+                    className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm"
+                  >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-2">
                         <Skeleton className="h-4 w-32 bg-gray-200 dark:bg-gray-800 rounded-sm" />
@@ -561,11 +570,13 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-black dark:text-white">Total Tickets</CardTitle>
+            <CardTitle className="text-sm font-medium text-black dark:text-white">
+              Total Tickets
+            </CardTitle>
             <MessageSquare className="h-4 w-4 text-black dark:text-white opacity-70" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-black dark:text-white">
+            <div className="text-xl font-medium text-black dark:text-white">
               {stats.raisedTickets +
                 stats.inProgressTickets +
                 stats.completedTickets}
@@ -574,29 +585,41 @@ export default function DashboardPage() {
         </Card>
         <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-black dark:text-white">New Requests</CardTitle>
+            <CardTitle className="text-sm font-medium text-black dark:text-white">
+              New Requests
+            </CardTitle>
             <Clock className="h-4 w-4 text-black dark:text-white opacity-70" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-black dark:text-white">{stats.raisedTickets}</div>
+            <div className="text-xl font-medium text-black dark:text-white">
+              {stats.raisedTickets}
+            </div>
           </CardContent>
         </Card>
         <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-black dark:text-white">In Progress</CardTitle>
+            <CardTitle className="text-sm font-medium text-black dark:text-white">
+              In Progress
+            </CardTitle>
             <Clock className="h-4 w-4 text-black dark:text-white opacity-70" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-black dark:text-white">{stats.inProgressTickets}</div>
+            <div className="text-xl font-medium text-black dark:text-white">
+              {stats.inProgressTickets}
+            </div>
           </CardContent>
         </Card>
         <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-black dark:text-white">Completed</CardTitle>
+            <CardTitle className="text-sm font-medium text-black dark:text-white">
+              Completed
+            </CardTitle>
             <CheckCircle className="h-4 w-4 text-black dark:text-white opacity-70" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-black dark:text-white">{stats.completedTickets}</div>
+            <div className="text-xl font-medium text-black dark:text-white">
+              {stats.completedTickets}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -635,13 +658,48 @@ export default function DashboardPage() {
           className="w-full"
         >
           <TabsList className="grid grid-cols-7 w-full lg:w-auto bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm">
-            <TabsTrigger value="all" className="text-black dark:text-white data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black rounded-sm">All</TabsTrigger>
-            <TabsTrigger value="service_fb" className="text-black dark:text-white data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black rounded-sm">Food & Beverage</TabsTrigger>
-            <TabsTrigger value="housekeeping" className="text-black dark:text-white data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black rounded-sm">Housekeeping</TabsTrigger>
-            <TabsTrigger value="maintenance" className="text-black dark:text-white data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black rounded-sm">Maintenance</TabsTrigger>
-            <TabsTrigger value="porter" className="text-black dark:text-white data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black rounded-sm">Porter</TabsTrigger>
-            <TabsTrigger value="concierge" className="text-black dark:text-white data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black rounded-sm">Concierge</TabsTrigger>
-            <TabsTrigger value="reception" className="text-black dark:text-white data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black rounded-sm">Reception</TabsTrigger>
+            <TabsTrigger
+              value="all"
+              className="text-black dark:text-white data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black rounded-sm"
+            >
+              All
+            </TabsTrigger>
+            <TabsTrigger
+              value="service_fb"
+              className="text-black dark:text-white data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black rounded-sm"
+            >
+              Food & Beverage
+            </TabsTrigger>
+            <TabsTrigger
+              value="housekeeping"
+              className="text-black dark:text-white data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black rounded-sm"
+            >
+              Housekeeping
+            </TabsTrigger>
+            <TabsTrigger
+              value="maintenance"
+              className="text-black dark:text-white data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black rounded-sm"
+            >
+              Maintenance
+            </TabsTrigger>
+            <TabsTrigger
+              value="porter"
+              className="text-black dark:text-white data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black rounded-sm"
+            >
+              Porter
+            </TabsTrigger>
+            <TabsTrigger
+              value="concierge"
+              className="text-black dark:text-white data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black rounded-sm"
+            >
+              Concierge
+            </TabsTrigger>
+            <TabsTrigger
+              value="reception"
+              className="text-black dark:text-white data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black rounded-sm"
+            >
+              Reception
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -662,7 +720,10 @@ export default function DashboardPage() {
                   <CardTitle className="text-lg font-semibold text-black dark:text-white">
                     New Requests
                   </CardTitle>
-                  <Badge variant="outline" className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm">
+                  <Badge
+                    variant="outline"
+                    className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm"
+                  >
                     {getFilteredTickets("raised").length}
                   </Badge>
                 </div>
@@ -694,7 +755,10 @@ export default function DashboardPage() {
                   <CardTitle className="text-lg font-semibold text-black dark:text-white">
                     In Progress
                   </CardTitle>
-                  <Badge variant="outline" className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm">
+                  <Badge
+                    variant="outline"
+                    className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm"
+                  >
                     {getFilteredTickets("in_progress").length}
                   </Badge>
                 </div>
@@ -726,7 +790,10 @@ export default function DashboardPage() {
                   <CardTitle className="text-lg font-semibold text-black dark:text-white">
                     Completed
                   </CardTitle>
-                  <Badge variant="outline" className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm">
+                  <Badge
+                    variant="outline"
+                    className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm"
+                  >
                     {getFilteredTickets("completed").length}
                   </Badge>
                 </div>
@@ -825,9 +892,24 @@ export default function DashboardPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 rounded-sm">
-                        <SelectItem value="raised" className="text-black dark:text-white">New</SelectItem>
-                        <SelectItem value="in_progress" className="text-black dark:text-white">In Progress</SelectItem>
-                        <SelectItem value="completed" className="text-black dark:text-white">Completed</SelectItem>
+                        <SelectItem
+                          value="raised"
+                          className="text-black dark:text-white"
+                        >
+                          New
+                        </SelectItem>
+                        <SelectItem
+                          value="in_progress"
+                          className="text-black dark:text-white"
+                        >
+                          In Progress
+                        </SelectItem>
+                        <SelectItem
+                          value="completed"
+                          className="text-black dark:text-white"
+                        >
+                          Completed
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -858,8 +940,13 @@ export default function DashboardPage() {
 
                 <div className="space-y-4 max-h-96 overflow-y-auto">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-black dark:text-white">Conversation History</h4>
-                    <Badge variant="outline" className="text-xs bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm">
+                    <h4 className="font-medium text-black dark:text-white">
+                      Conversation History
+                    </h4>
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm"
+                    >
                       {selectedTicket.messages?.length || 0} messages
                     </Badge>
                   </div>
@@ -984,7 +1071,6 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
-
               </div>
             </>
           )}
@@ -1065,7 +1151,10 @@ function DraggableTicketCard({
     >
       {/* Category Badge */}
       {ticket.category && (
-        <Badge variant="secondary" className="text-xs bg-gray-100 dark:bg-gray-900 text-black dark:text-white border-gray-200 dark:border-gray-800 rounded-sm">
+        <Badge
+          variant="secondary"
+          className="text-xs bg-gray-100 dark:bg-gray-900 text-black dark:text-white border-gray-200 dark:border-gray-800 rounded-sm"
+        >
           {categoryLabels[ticket.category as keyof typeof categoryLabels] ||
             ticket.category}
         </Badge>
@@ -1095,7 +1184,6 @@ function DraggableTicketCard({
           {ticket.priority}
         </Badge>
       </div>
-
 
       <div className="flex items-center justify-between text-xs text-black dark:text-white opacity-70">
         <span>

@@ -58,9 +58,16 @@ interface BillingCalculation {
 export default function BillingCalculatorPage() {
   const { hotel } = useTenantContext();
   const [roomPrice, setRoomPrice] = useState<number>(0);
-  const [checkInDate, setCheckInDate] = useState<string>("");
+  const [checkInDate, setCheckInDate] = useState<string>(() => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  });
   const [checkInTime, setCheckInTime] = useState<string>("14:00");
-  const [checkOutDate, setCheckOutDate] = useState<string>("");
+  const [checkOutDate, setCheckOutDate] = useState<string>(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split("T")[0];
+  });
   const [checkOutTime, setCheckOutTime] = useState<string>("11:00");
   const [calculation, setCalculation] = useState<BillingCalculation | null>(
     null
@@ -101,7 +108,7 @@ export default function BillingCalculatorPage() {
   const calculateNights = (checkIn: Date, checkOut: Date): number => {
     const timeDiff = checkOut.getTime() - checkIn.getTime();
     const days = timeDiff / (1000 * 60 * 60 * 24);
-    return Math.max(1, Math.floor(days));
+    return Math.max(1, Math.ceil(days));
   };
 
   const calculateEarlyCheckinCharges = (
@@ -261,27 +268,20 @@ export default function BillingCalculatorPage() {
   };
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Calculator className="h-8 w-8" />
-          Billing Calculator
-        </h2>
-      </div>
-
+    <div className="flex-1 space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="rounded-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-black dark:text-white">
               Standard Check-in
             </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <Clock className="h-4 w-4 text-black dark:text-white opacity-70" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl font-medium text-black dark:text-white">
               {hotelPolicies.standard_checkin_time}:00
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-black dark:text-white opacity-70">
               {hotelPolicies.standard_checkin_time === 12
                 ? "Noon"
                 : hotelPolicies.standard_checkin_time > 12
@@ -290,18 +290,18 @@ export default function BillingCalculatorPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-black dark:text-white">
               Standard Check-out
             </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <Clock className="h-4 w-4 text-black dark:text-white opacity-70" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl font-medium text-black dark:text-white">
               {hotelPolicies.standard_checkout_time}:00
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-black dark:text-white opacity-70">
               {hotelPolicies.standard_checkout_time === 12
                 ? "Noon"
                 : hotelPolicies.standard_checkout_time > 12
@@ -310,41 +310,43 @@ export default function BillingCalculatorPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-black dark:text-white">
               Early Check-in Policy
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="h-4 w-4 text-black dark:text-white opacity-70" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl font-medium text-black dark:text-white">
               {getPolicyText(hotelPolicies.early_checkin_policy)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-black dark:text-white opacity-70">
               Before standard time
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-black dark:text-white">
               Late Check-out Policy
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="h-4 w-4 text-black dark:text-white opacity-70" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl font-medium text-black dark:text-white">
               {getPolicyText(hotelPolicies.late_checkout_policy)}
             </div>
-            <p className="text-xs text-muted-foreground">After standard time</p>
+            <p className="text-xs text-black dark:text-white opacity-70">
+              After standard time
+            </p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         {/* Calculator Form */}
-        <Card>
+        <Card className="rounded-sm">
           <CardHeader>
             <CardTitle>Calculate Guest Billing</CardTitle>
             <CardDescription>
@@ -361,6 +363,7 @@ export default function BillingCalculatorPage() {
                 placeholder="e.g., 2500"
                 value={roomPrice || ""}
                 onChange={(e) => setRoomPrice(Number(e.target.value))}
+                className="rounded-sm"
               />
             </div>
 
@@ -372,6 +375,7 @@ export default function BillingCalculatorPage() {
                   type="date"
                   value={checkInDate}
                   onChange={(e) => setCheckInDate(e.target.value)}
+                  className="rounded-sm"
                 />
               </div>
               <div className="space-y-2">
@@ -381,6 +385,7 @@ export default function BillingCalculatorPage() {
                   type="time"
                   value={checkInTime}
                   onChange={(e) => setCheckInTime(e.target.value)}
+                  className="rounded-sm"
                 />
               </div>
             </div>
@@ -393,6 +398,7 @@ export default function BillingCalculatorPage() {
                   type="date"
                   value={checkOutDate}
                   onChange={(e) => setCheckOutDate(e.target.value)}
+                  className="rounded-sm"
                 />
               </div>
               <div className="space-y-2">
@@ -402,6 +408,7 @@ export default function BillingCalculatorPage() {
                   type="time"
                   value={checkOutTime}
                   onChange={(e) => setCheckOutTime(e.target.value)}
+                  className="rounded-sm"
                 />
               </div>
             </div>
@@ -410,11 +417,15 @@ export default function BillingCalculatorPage() {
               <Button
                 onClick={handleCalculate}
                 disabled={isCalculating}
-                className="flex-1"
+                className="flex-1 rounded-sm"
               >
                 {isCalculating ? "Calculating..." : "Calculate Billing"}
               </Button>
-              <Button variant="outline" onClick={resetCalculator}>
+              <Button
+                variant="outline"
+                onClick={resetCalculator}
+                className="rounded-sm"
+              >
                 Reset
               </Button>
             </div>
@@ -422,7 +433,7 @@ export default function BillingCalculatorPage() {
         </Card>
 
         {/* Results */}
-        <Card>
+        <Card className="rounded-sm">
           <CardHeader>
             <CardTitle>Billing Breakdown</CardTitle>
             <CardDescription>
@@ -493,7 +504,7 @@ export default function BillingCalculatorPage() {
 
                 {(calculation.earlyCheckinCharges > 0 ||
                   calculation.lateCheckoutCharges > 0) && (
-                  <div className="bg-amber-50 dark:bg-amber-950/50 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+                  <div className="bg-amber-50 dark:bg-amber-950/50 p-3 rounded-sm border border-amber-200 dark:border-amber-800">
                     <div className="flex items-start space-x-2">
                       <Info className="h-4 w-4 text-amber-600 mt-0.5" />
                       <div className="text-sm text-amber-800 dark:text-amber-200">
