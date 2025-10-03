@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Check, Zap, Crown, Rocket, ArrowRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 const plans = [
   {
@@ -96,6 +97,29 @@ const comparison = [
 ];
 
 export function PricingSection() {
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      const headerHeight = 90;
+      const elementPosition = element.offsetTop - headerHeight;
+      window.scrollTo({
+        top: elementPosition,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const handlePlanSelect = (planName: string) => {
+    setSelectedPlan(planName);
+    scrollToSection("contact");
+  };
+
+  const handleScheduleDemo = () => {
+    scrollToSection("contact");
+  };
+
   return (
     <section id="pricing" className="py-20 bg-white">
       <div className="container mx-auto px-4">
@@ -142,7 +166,7 @@ export function PricingSection() {
                   </div>
                 )}
 
-                <div className="bg-white border border-gray-200 rounded-sm p-6 h-full">
+                <div className="bg-white border border-gray-200 rounded-sm p-6 h-full transition-all duration-300">
                   {/* Plan Header */}
                   <div className="text-center mb-6">
                     <h3 className="text-xl font-bold text-gray-900 mb-2">
@@ -181,13 +205,15 @@ export function PricingSection() {
 
                   {/* CTA Button */}
                   <Button
-                    className={`w-full py-2 text-sm font-medium rounded-sm ${
+                    onClick={() => handlePlanSelect(plan.name)}
+                    className={`w-full py-2 text-sm font-medium rounded-sm transition-all duration-200 ${
                       plan.popular
                         ? "bg-black text-white hover:bg-gray-800"
-                        : "bg-white border border-gray-300 hover:border-gray-400 text-gray-900"
+                        : "bg-white border border-gray-300 hover:border-gray-400 text-gray-900 hover:bg-gray-50"
                     }`}
                   >
                     {plan.popular ? "Start Free Trial" : "Get Started"}
+                    <ArrowRight className="ml-2 w-4 h-4" />
                   </Button>
                 </div>
               </motion.div>
@@ -229,8 +255,12 @@ export function PricingSection() {
               That's ₹4,08,012 saved per year, plus increased revenue from
               better guest satisfaction.
             </p>
-            <Button className="bg-black text-white hover:bg-gray-800 px-6 py-2 text-sm font-medium rounded-sm">
+            <Button
+              onClick={handleScheduleDemo}
+              className="bg-black text-white hover:bg-gray-800 px-6 py-2 text-sm font-medium rounded-sm transition-all duration-200"
+            >
               Schedule Demo
+              <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </motion.div>
         </div>

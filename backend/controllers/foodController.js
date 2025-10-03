@@ -154,6 +154,50 @@ exports.getFoodItems = async (req, res, next) => {
   }
 };
 
+// @desc    Search available food items
+// @route   GET /api/food/search
+// @access  Private/Manager
+exports.searchFoodItems = async (req, res, next) => {
+  try {
+    if (!req.tenantModels || !req.tenantModels.Food) {
+      return res.status(500).json({
+        success: false,
+        error: "Tenant database not properly initialized",
+      });
+    }
+
+    const Food = req.tenantModels.Food;
+
+    const search = req.query.search || "";
+
+    // Build query for available food items
+    const query = { isAvailable: true };
+
+    // Add search functionality
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+        { category: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const foods = await Food.find(query)
+      .select("name price category description preparationTime")
+      .sort({ name: 1 })
+      .limit(50); // Limit results for performance
+
+    res.status(200).json({
+      success: true,
+      count: foods.length,
+      data: foods,
+    });
+  } catch (error) {
+    console.error("Search food items error:", error);
+    next(new ErrorResponse("Server error", 500));
+  }
+};
+
 // @desc    Get single food item
 // @route   GET /api/food/:id
 // @access  Private/Manager

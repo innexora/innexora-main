@@ -50,7 +50,7 @@ export function Header() {
         </p>
         <button
           onClick={() => scrollToSection("contact")}
-          className="text-sm bg-stone-900 text-white cursor-pointer px-2 py-1 rounded-xs"
+          className="text-sm bg-stone-900 text-white cursor-pointer px-2 py-1 rounded-sm hover:bg-stone-800 transition-all duration-200"
         >
           Click here
         </button>
@@ -66,7 +66,7 @@ export function Header() {
             {/* <div className="w-8 h-8 rounded-sm bg-black flex items-center justify-center">
               <Hotel className="w-4 h-4 text-white" />
             </div> */}
-            <span className="text-lg font-semibold bg-orange-50 text-black border-2 px-2 border-black">
+            <span className="text-lg font-semibold bg-orange-50 text-black border-2 px-2 border-black rounded-xs">
               Innexora
             </span>
           </Link>
@@ -90,14 +90,14 @@ export function Header() {
               variant="ghost"
               size="sm"
               onClick={() => scrollToSection("contact")}
-              className="text-sm font-medium text-gray-700 hover:text-black hover:bg-gray-50"
+              className="text-sm font-medium text-gray-700 hover:text-black hover:bg-gray-50 rounded-sm transition-all duration-200"
             >
               Demo
             </Button>
             <Button
               size="sm"
               onClick={() => scrollToSection("pricing")}
-              className="bg-black text-white hover:bg-gray-800 text-sm font-medium rounded-sm"
+              className="bg-black text-white hover:bg-gray-800 text-sm font-medium rounded-sm transition-all duration-200"
             >
               Get Started
             </Button>
@@ -134,7 +134,7 @@ export function Header() {
                   variant="outline"
                   size="sm"
                   onClick={() => scrollToSection("contact")}
-                  className="w-full text-sm"
+                  className="w-full text-sm rounded-sm"
                 >
                   Demo
                 </Button>

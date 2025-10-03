@@ -90,6 +90,10 @@ export const getMe = async (): Promise<{
 
 export const logout = async (): Promise<void> => {
   await apiClient.post("/auth/logout", {});
+  // Clear token from localStorage
+  localStorage.removeItem("token");
+  // Redirect to login page
+  window.location.href = "/auth/login";
 };
 
 export const setAuthToken = (token: string | null) => {

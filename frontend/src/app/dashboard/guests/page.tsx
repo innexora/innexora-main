@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import {
   Table,
   TableBody,
@@ -133,6 +134,7 @@ export default function GuestsPage() {
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [roomSearchTerm, setRoomSearchTerm] = useState("");
   const [isCheckInDialogOpen, setIsCheckInDialogOpen] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -173,9 +175,19 @@ export default function GuestsPage() {
 
   useEffect(() => {
     fetchGuests(pagination.current, searchTerm, "checked_in");
-    fetchAvailableRooms();
     fetchStats();
   }, [pagination.current, searchTerm]);
+
+  // Debounced room search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (isCheckInDialogOpen) {
+        fetchAvailableRooms(roomSearchTerm);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [roomSearchTerm, isCheckInDialogOpen]);
 
   // Fetch guests on component mount and when search term changes
 
@@ -221,12 +233,12 @@ export default function GuestsPage() {
     }
   };
 
-  const fetchAvailableRooms = async () => {
+  const fetchAvailableRooms = async (search = "") => {
     try {
-      const response = await apiClient.get("/rooms");
-      setAvailableRooms(
-        response.data.data.filter((room: Room) => room.status === "available")
+      const response = await apiClient.get(
+        `/rooms/available/search?search=${encodeURIComponent(search)}`
       );
+      setAvailableRooms(response.data.data);
     } catch (error) {
       console.error("Error fetching rooms:", error);
     }
@@ -460,7 +472,13 @@ export default function GuestsPage() {
 
         <Dialog
           open={isCheckInDialogOpen}
-          onOpenChange={setIsCheckInDialogOpen}
+          onOpenChange={(open) => {
+            setIsCheckInDialogOpen(open);
+            if (open) {
+              setRoomSearchTerm("");
+              fetchAvailableRooms("");
+            }
+          }}
         >
           <DialogTrigger asChild>
             <Button className="bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 rounded-sm">
@@ -474,7 +492,8 @@ export default function GuestsPage() {
                 Check In New Guest
               </DialogTitle>
               <DialogDescription className="text-black dark:text-white opacity-70 text-sm">
-                Fill in the guest details to complete check-in process. Check-in time will be automatically set to current time.
+                Fill in the guest details to complete check-in process. Check-in
+                time will be automatically set to current time.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -637,23 +656,20 @@ export default function GuestsPage() {
                   >
                     Room *
                   </Label>
-                  <Select
+                  <Combobox
+                    options={availableRooms.map((room) => ({
+                      value: room._id,
+                      label: `Room ${room.number} - ${room.type} (₹${room.price}/night)`,
+                    }))}
                     value={checkInForm.roomId}
                     onValueChange={(value) =>
                       setCheckInForm({ ...checkInForm, roomId: value })
                     }
-                  >
-                    <SelectTrigger className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm">
-                      <SelectValue placeholder="Select room" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 rounded-sm">
-                      {availableRooms.map((room) => (
-                        <SelectItem key={room._id} value={room._id}>
-                          Room {room.number} - {room.type} (₹{room.price}/night)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onSearchChange={setRoomSearchTerm}
+                    placeholder="Select room"
+                    searchPlaceholder="Search rooms..."
+                    emptyMessage="No available rooms found."
+                  />
                 </div>
               </div>
 

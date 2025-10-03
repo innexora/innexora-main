@@ -2,9 +2,32 @@
 
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play } from "lucide-react";
+import { ArrowRight, Play, X } from "lucide-react";
+import { useState } from "react";
 
 export function HeroSection() {
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      const headerHeight = 90;
+      const elementPosition = element.offsetTop - headerHeight;
+      window.scrollTo({
+        top: elementPosition,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const handleStartTrial = () => {
+    scrollToSection("contact");
+  };
+
+  const handleWatchDemo = () => {
+    setIsVideoOpen(true);
+  };
+
   return (
     <section id="hero" className="pt-30 pb-20 bg-stone-50">
       <div className="max-w-6xl mx-auto px-6">
@@ -52,7 +75,8 @@ export function HeroSection() {
           >
             <Button
               size="lg"
-              className="bg-black text-white hover:bg-gray-800 px-6 py-3 text-sm font-medium rounded-sm"
+              onClick={handleStartTrial}
+              className="bg-black text-white hover:bg-gray-800 px-6 py-3 text-sm font-medium rounded-sm transition-all duration-200"
             >
               Start Free Trial
               <ArrowRight className="ml-2 w-4 h-4" />
@@ -60,11 +84,73 @@ export function HeroSection() {
             <Button
               variant="outline"
               size="lg"
-              className="border border-gray-300 hover:border-gray-400 px-6 py-3 text-sm font-medium rounded-sm"
+              onClick={handleWatchDemo}
+              className="border border-gray-300 hover:border-gray-400 hover:bg-gray-50 px-6 py-3 text-sm font-medium rounded-sm transition-all duration-200"
             >
               <Play className="mr-2 w-4 h-4" />
               Watch Demo
             </Button>
+          </motion.div>
+
+          {/* Demo Video Modal */}
+          {isVideoOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-sm max-w-4xl w-full relative">
+                <button
+                  onClick={() => setIsVideoOpen(false)}
+                  className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-10"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+                <div className="aspect-video bg-gray-100 rounded-sm overflow-hidden">
+                  {/* Placeholder for demo video */}
+                  <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="w-20 h-20 bg-black rounded-sm flex items-center justify-center mb-4 mx-auto">
+                        <Play className="w-8 h-8 text-white ml-1" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                        Innexora Platform Demo
+                      </h3>
+                      <p className="text-gray-600 text-sm max-w-md mx-auto">
+                        See how hotels transform their operations with
+                        AI-powered guest communication, QR ordering, and
+                        real-time analytics.
+                      </p>
+                      <div className="mt-6 bg-gray-800 text-white px-4 py-2 rounded-sm text-sm inline-block">
+                        Demo video will be loaded here
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Product Preview */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="mb-16"
+          >
+            <div className="bg-white border border-gray-200 rounded-sm p-6">
+              <div className="aspect-video bg-gradient-to-br from-gray-50 to-gray-100 rounded-sm overflow-hidden">
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-black rounded-sm flex items-center justify-center mb-4 mx-auto">
+                      <Play className="w-6 h-6 text-white ml-1" />
+                    </div>
+                    <h4 className="text-lg font-medium text-gray-800 mb-2">
+                      Platform Dashboard Preview
+                    </h4>
+                    <p className="text-gray-600 text-sm">
+                      Click "Watch Demo" to see the full platform in action
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </motion.div>
 
           {/* Key Benefits */}

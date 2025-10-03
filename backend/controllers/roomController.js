@@ -757,3 +757,103 @@ exports.validateRoomData = [
     next();
   },
 ];
+
+// @desc    Search available rooms
+// @route   GET /api/rooms/available/search
+// @access  Private/Manager
+exports.searchAvailableRooms = async (req, res, next) => {
+  try {
+    // Use tenant models - must exist for tenant domains
+    if (!req.tenantModels || !req.tenantModels.Room) {
+      console.error("Tenant models not available:", req.tenantModels);
+      return res.status(500).json({
+        success: false,
+        error: "Tenant database not properly initialized",
+      });
+    }
+    const Room = req.tenantModels.Room;
+
+    const search = req.query.search || "";
+
+    // Build query for available rooms
+    const query = {
+      status: "available",
+      isActive: true,
+    };
+
+    // Add search functionality
+    if (search) {
+      query.$or = [
+        { number: { $regex: `^${search}`, $options: "i" } },
+        { type: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const rooms = await Room.find(query)
+      .select("number type floor price capacity amenities description")
+      .sort({ floor: 1, number: 1 })
+      .limit(50); // Limit results for performance
+
+    res.status(200).json({
+      success: true,
+      count: rooms.length,
+      data: rooms,
+    });
+  } catch (error) {
+    console.error("Search available rooms error:", error);
+    next(new ErrorResponse("Server error", 500));
+  }
+};
+
+// @desc    Search occupied rooms
+// @route   GET /api/rooms/occupied/search
+// @access  Private/Manager
+exports.searchOccupiedRooms = async (req, res, next) => {
+  try {
+    // Use tenant models - must exist for tenant domains
+    if (!req.tenantModels || !req.tenantModels.Room) {
+      console.error("Tenant models not available:", req.tenantModels);
+      return res.status(500).json({
+        success: false,
+        error: "Tenant database not properly initialized",
+      });
+    }
+    const Room = req.tenantModels.Room;
+
+    const search = req.query.search || "";
+
+    // Build query for occupied rooms
+    const query = {
+      status: "occupied",
+      isActive: true,
+    };
+
+    // Add search functionality
+    if (search) {
+      query.$or = [
+        { number: { $regex: `^${search}`, $options: "i" } },
+        { type: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const rooms = await Room.find(query)
+      .select("number type floor price capacity amenities description")
+      .populate({
+        path: "currentGuest",
+        select: "name checkInDate",
+      })
+      .sort({ floor: 1, number: 1 })
+      .limit(50); // Limit results for performance
+
+    res.status(200).json({
+      success: true,
+      count: rooms.length,
+      data: rooms,
+    });
+  } catch (error) {
+    console.error("Search occupied rooms error:", error);
+    next(new ErrorResponse("Server error", 500));
+  }
+};

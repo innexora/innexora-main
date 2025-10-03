@@ -11,10 +11,12 @@ import {
   Shield,
   Clock,
   Users,
+  CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useState } from "react";
 
 const contactMethods = [
   {
@@ -43,30 +45,105 @@ const contactMethods = [
   },
 ];
 
-const benefits = [
-  {
-    icon: Zap,
-    title: "Quick Setup",
-    description: "Get started in under 2 hours",
-  },
-  {
-    icon: Shield,
-    title: "Secure & Reliable",
-    description: "Enterprise-grade security",
-  },
-  {
-    icon: Clock,
-    title: "24/7 Support",
-    description: "Always here when you need us",
-  },
-  {
-    icon: Users,
-    title: "Expert Training",
-    description: "Complete staff onboarding included",
-  },
-];
-
 export function ContactSection() {
+  const [formData, setFormData] = useState({
+    name: "",
+    hotelName: "",
+    email: "",
+    phone: "",
+    roomCount: "",
+    message: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (!formData.hotelName.trim())
+      newErrors.hotelName = "Hotel name is required";
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = "Email is invalid";
+    }
+    if (!formData.phone.trim()) newErrors.phone = "Phone is required";
+    if (!formData.roomCount) newErrors.roomCount = "Room count is required";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send message");
+      }
+
+      setIsSubmitted(true);
+
+      // Reset form after 5 seconds
+      setTimeout(() => {
+        setIsSubmitted(false);
+        setFormData({
+          name: "",
+          hotelName: "",
+          email: "",
+          phone: "",
+          roomCount: "",
+          message: "",
+        });
+      }, 5000);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      // You can add error state handling here if needed
+      alert("Failed to send message. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleContactMethod = (method: string) => {
+    switch (method) {
+      case "phone":
+        window.open("tel:+919876543210", "_self");
+        break;
+      case "email":
+        window.open("mailto:hello@innexora.com", "_self");
+        break;
+      case "demo":
+        // Scroll to form
+        const formElement = document.getElementById("contact-form");
+        if (formElement) {
+          formElement.scrollIntoView({ behavior: "smooth" });
+        }
+        break;
+    }
+  };
+
   return (
     <section id="contact" className="py-20 bg-stone-50">
       <div className="container mx-auto px-4">
@@ -99,79 +176,173 @@ export function ContactSection() {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
               className="bg-white border border-gray-200 rounded-sm p-8 mb-12"
+              id="contact-form"
             >
               <h3 className="text-xl font-bold text-gray-900 mb-6">
                 Get Your Free Demo
               </h3>
-              <form className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Name
-                    </label>
-                    <Input
-                      placeholder="Your name"
-                      className="rounded-sm border-gray-300"
-                    />
+
+              {isSubmitted ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-green-100 rounded-sm flex items-center justify-center mb-4 mx-auto">
+                    <CheckCircle className="w-8 h-8 text-green-600" />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Hotel Name
-                    </label>
-                    <Input
-                      placeholder="Hotel name"
-                      className="rounded-sm border-gray-300"
-                    />
-                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                    Thank You!
+                  </h4>
+                  <p className="text-gray-600 mb-4">
+                    We've received your request and will contact you within 24
+                    hours.
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    In the meantime, feel free to explore our features above.
+                  </p>
                 </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Name *
+                      </label>
+                      <Input
+                        value={formData.name}
+                        onChange={(e) =>
+                          handleInputChange("name", e.target.value)
+                        }
+                        placeholder="Your name"
+                        className={`rounded-sm border ${
+                          errors.name ? "border-red-500" : "border-gray-300"
+                        }`}
+                      />
+                      {errors.name && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {errors.name}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Hotel Name *
+                      </label>
+                      <Input
+                        value={formData.hotelName}
+                        onChange={(e) =>
+                          handleInputChange("hotelName", e.target.value)
+                        }
+                        placeholder="Hotel name"
+                        className={`rounded-sm border ${
+                          errors.hotelName
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        }`}
+                      />
+                      {errors.hotelName && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {errors.hotelName}
+                        </p>
+                      )}
+                    </div>
+                  </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email *
+                      </label>
+                      <Input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) =>
+                          handleInputChange("email", e.target.value)
+                        }
+                        placeholder="your@email.com"
+                        className={`rounded-sm border ${
+                          errors.email ? "border-red-500" : "border-gray-300"
+                        }`}
+                      />
+                      {errors.email && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {errors.email}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Phone *
+                      </label>
+                      <Input
+                        value={formData.phone}
+                        onChange={(e) =>
+                          handleInputChange("phone", e.target.value)
+                        }
+                        placeholder="+91 98765 43210"
+                        className={`rounded-sm border ${
+                          errors.phone ? "border-red-500" : "border-gray-300"
+                        }`}
+                      />
+                      {errors.phone && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {errors.phone}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email
+                      Number of Rooms *
                     </label>
-                    <Input
-                      type="email"
-                      placeholder="your@email.com"
-                      className="rounded-sm border-gray-300"
-                    />
+                    <select
+                      value={formData.roomCount}
+                      onChange={(e) =>
+                        handleInputChange("roomCount", e.target.value)
+                      }
+                      className={`w-full rounded-sm border p-2 text-sm ${
+                        errors.roomCount ? "border-red-500" : "border-gray-300"
+                      }`}
+                    >
+                      <option value="">Select room count</option>
+                      <option value="1-25">1-25 rooms</option>
+                      <option value="26-50">26-50 rooms</option>
+                      <option value="51-100">51-100 rooms</option>
+                      <option value="100+">100+ rooms</option>
+                    </select>
+                    {errors.roomCount && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {errors.roomCount}
+                      </p>
+                    )}
                   </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone
+                      Additional Message (Optional)
                     </label>
-                    <Input
-                      placeholder="+91 98765 43210"
-                      className="rounded-sm border-gray-300"
+                    <Textarea
+                      value={formData.message}
+                      onChange={(e) =>
+                        handleInputChange("message", e.target.value)
+                      }
+                      placeholder="Tell us about your specific needs..."
+                      className="rounded-sm border border-gray-300 min-h-[100px]"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Number of Rooms
-                  </label>
-                  <select className="w-full rounded-sm border-gray-300 p-2 text-sm">
-                    <option>Select room count</option>
-                    <option>1-25 rooms</option>
-                    <option>26-50 rooms</option>
-                    <option>51-100 rooms</option>
-                    <option>100+ rooms</option>
-                  </select>
-                </div>
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full bg-black text-white hover:bg-gray-800 py-2 text-sm font-medium rounded-sm transition-all duration-200 disabled:opacity-50"
+                  >
+                    {isSubmitting ? "Submitting..." : "Get Free Demo"}
+                    {!isSubmitting && <ArrowRight className="ml-2 w-4 h-4" />}
+                  </Button>
 
-                <Button
-                  type="submit"
-                  className="w-full bg-black text-white hover:bg-gray-800 py-2 text-sm font-medium rounded-sm"
-                >
-                  Get Free Demo
-                  <ArrowRight className="ml-2 w-4 h-4" />
-                </Button>
-
-                <p className="text-xs text-gray-500 text-center">
-                  No spam. Just a genuine conversation about your needs.
-                </p>
-              </form>
+                  <p className="text-xs text-gray-500 text-center">
+                    No spam. Just a genuine conversation about your needs.
+                  </p>
+                </form>
+              )}
             </motion.div>
           </div>
 
@@ -191,12 +362,17 @@ export function ContactSection() {
               experiences that guests love.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button className="bg-white text-black hover:bg-gray-100 px-6 py-2 text-sm font-medium rounded-sm">
+              <Button
+                onClick={() => handleContactMethod("demo")}
+                className="bg-white text-black hover:bg-gray-100 px-6 py-2 text-sm font-medium rounded-sm transition-all duration-200"
+              >
                 Start Free Trial
+                <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
               <Button
                 variant="outline"
-                className="border border-whit text-black hover:bg-white hover:text-black px-6 py-2 text-sm font-medium rounded-sm"
+                onClick={() => handleContactMethod("demo")}
+                className="border border-white text-white hover:bg-white hover:text-black px-6 py-2 text-sm font-medium rounded-sm transition-all duration-200"
               >
                 Schedule Demo
               </Button>

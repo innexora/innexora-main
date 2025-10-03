@@ -48,6 +48,10 @@ const guestSchema = new mongoose.Schema(
       type: Date,
       required: [true, "Check-in date is required"],
     },
+    actualCheckInDate: {
+      type: Date,
+      default: null,
+    },
     checkOutDate: {
       type: Date,
       required: [true, "Check-out date is required"],
@@ -141,7 +145,10 @@ guestSchema.post("save", async function (doc) {
             `✅ Guest ${this.name} checked in - Room ${this.roomNumber} marked occupied`
           );
         } catch (roomError) {
-          console.warn(`Failed to update room status for ${this.roomNumber}:`, roomError.message);
+          console.warn(
+            `Failed to update room status for ${this.roomNumber}:`,
+            roomError.message
+          );
         }
       } else if (this.status === "checked_out") {
         // Mark bill as guest checked out
@@ -207,7 +214,9 @@ guestSchema.pre("save", async function (next) {
     ) {
       // Skip bill validation for now to avoid timeout issues
       // Bill validation is handled in the controller
-      console.log(`Guest ${this.name} status changing from checked_in to ${this.status}`);
+      console.log(
+        `Guest ${this.name} status changing from checked_in to ${this.status}`
+      );
     }
     next();
   } catch (error) {
@@ -259,7 +268,7 @@ guestSchema.statics.canCheckOut = async function (guestId) {
     canCheckOut: true,
     balanceAmount: 0,
     billNumber: null,
-    message: "Bill validation handled in controller"
+    message: "Bill validation handled in controller",
   };
 };
 

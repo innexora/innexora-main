@@ -68,4 +68,8 @@ router
   .route("/:id/recalculate-billing")
   .post(authorize("manager", "admin"), guestController.recalculateGuestBilling);
 
+router
+  .route("/:id/extend-stay")
+  .put(authorize("manager", "admin"), guestController.extendGuestStay);
+
 module.exports = router;

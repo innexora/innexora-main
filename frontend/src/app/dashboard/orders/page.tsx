@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import {
   Table,
   TableBody,
@@ -157,6 +158,10 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [roomSearchTerm, setRoomSearchTerm] = useState("");
+  const [foodSearchTerm, setFoodSearchTerm] = useState("");
+  const [occupiedRooms, setOccupiedRooms] = useState<any[]>([]);
+  const [availableFoodItems, setAvailableFoodItems] = useState<FoodItem[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [pagination, setPagination] = useState({
@@ -195,10 +200,30 @@ export default function OrdersPage() {
   }, [pagination.current, searchTerm, statusFilter, typeFilter]);
 
   useEffect(() => {
-    fetchFoodItems();
-    fetchGuests();
     fetchStats();
   }, []);
+
+  // Debounced room search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (isCreateDialogOpen) {
+        fetchOccupiedRooms(roomSearchTerm);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [roomSearchTerm, isCreateDialogOpen]);
+
+  // Debounced food search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (isCreateDialogOpen) {
+        fetchAvailableFoodItems(foodSearchTerm);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [foodSearchTerm, isCreateDialogOpen]);
 
   const fetchOrders = async (
     page = 1,
@@ -291,6 +316,28 @@ export default function OrdersPage() {
       );
     } catch (error) {
       console.error("Error fetching guests:", error);
+    }
+  };
+
+  const fetchOccupiedRooms = async (search = "") => {
+    try {
+      const response = await apiClient.get(
+        `/rooms/occupied/search?search=${encodeURIComponent(search)}`
+      );
+      setOccupiedRooms(response.data.data);
+    } catch (error) {
+      console.error("Error fetching occupied rooms:", error);
+    }
+  };
+
+  const fetchAvailableFoodItems = async (search = "") => {
+    try {
+      const response = await apiClient.get(
+        `/food/search?search=${encodeURIComponent(search)}`
+      );
+      setAvailableFoodItems(response.data.data);
+    } catch (error) {
+      console.error("Error fetching food items:", error);
     }
   };
 
@@ -666,7 +713,18 @@ export default function OrdersPage() {
           </Select>
         </div>
 
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <Dialog
+          open={isCreateDialogOpen}
+          onOpenChange={(open) => {
+            setIsCreateDialogOpen(open);
+            if (open) {
+              setRoomSearchTerm("");
+              setFoodSearchTerm("");
+              fetchOccupiedRooms("");
+              fetchAvailableFoodItems("");
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button className="bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 rounded-sm">
               <Plus className="mr-2 h-4 w-4" />
@@ -685,31 +743,25 @@ export default function OrdersPage() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="guest" className="text-black dark:text-white">
-                    Guest *
+                  <Label htmlFor="room" className="text-black dark:text-white">
+                    Room *
                   </Label>
-                  <Select
+                  <Combobox
+                    options={occupiedRooms.map((room) => ({
+                      value: room.currentGuest?._id || room._id,
+                      label: `Room ${room.number} - ${
+                        room.currentGuest?.name || "No Guest"
+                      } (${room.type})`,
+                    }))}
                     value={orderForm.guestId}
                     onValueChange={(value) =>
                       setOrderForm({ ...orderForm, guestId: value })
                     }
-                  >
-                    <SelectTrigger className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm">
-                      <SelectValue placeholder="Select guest" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 rounded-sm">
-                      {guests.map((guest) => (
-                        <SelectItem
-                          key={guest._id}
-                          value={guest._id}
-                          className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
-                        >
-                          {guest.name} - Room{" "}
-                          {(guest as any).room?.number || "No Room"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onSearchChange={setRoomSearchTerm}
+                    placeholder="Select room"
+                    searchPlaceholder="Search rooms..."
+                    emptyMessage="No occupied rooms found."
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="type" className="text-black dark:text-white">
@@ -780,27 +832,20 @@ export default function OrdersPage() {
                       <Label className="text-sm text-black dark:text-white">
                         Food Item
                       </Label>
-                      <Select
+                      <Combobox
+                        options={availableFoodItems.map((food) => ({
+                          value: food._id,
+                          label: `${food.name} - ₹${food.price} (${food.category})`,
+                        }))}
                         value={item.foodId}
                         onValueChange={(value) =>
                           updateOrderItem(index, "foodId", value)
                         }
-                      >
-                        <SelectTrigger className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 text-black dark:text-white rounded-sm">
-                          <SelectValue placeholder="Select food item" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 rounded-sm">
-                          {foodItems.map((food) => (
-                            <SelectItem
-                              key={food._id}
-                              value={food._id}
-                              className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
-                            >
-                              {food.name} - ₹{food.price}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        onSearchChange={setFoodSearchTerm}
+                        placeholder="Select food item"
+                        searchPlaceholder="Search food items..."
+                        emptyMessage="No food items found."
+                      />
                     </div>
                     <div className="col-span-2">
                       <Label className="text-sm text-black dark:text-white">

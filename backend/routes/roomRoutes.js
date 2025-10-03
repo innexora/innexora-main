@@ -33,6 +33,20 @@ router
   );
 
 router
+  .route("/available/search")
+  .get(
+    authorize("staff", "manager", "admin"),
+    roomController.searchAvailableRooms
+  );
+
+router
+  .route("/occupied/search")
+  .get(
+    authorize("staff", "manager", "admin"),
+    roomController.searchOccupiedRooms
+  );
+
+router
   .route("/occupied")
   .get(authorize("staff", "manager", "admin"), roomController.getOccupiedRooms);
 

@@ -25,6 +25,10 @@ router
   );
 
 router
+  .route("/search")
+  .get(authorize("staff", "manager", "admin"), foodController.searchFoodItems);
+
+router
   .route("/:id")
   .get(authorize("staff", "manager", "admin"), foodController.getFoodItem)
   .put(

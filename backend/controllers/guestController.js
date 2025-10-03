@@ -429,12 +429,23 @@ exports.checkInGuest = async (req, res, next) => {
     guestData.room = roomId;
     guestData.roomNumber = room.number;
     guestData.status = "checked_in";
-    
+
     // Set actual check-in time to current time for real-world accuracy
-    guestData.checkInDate = new Date();
-    
+    guestData.actualCheckInDate = new Date();
+
+    // If checkInDate is not provided or is in the past, set it to current time as well
+    if (
+      !guestData.checkInDate ||
+      new Date(guestData.checkInDate) < new Date()
+    ) {
+      guestData.checkInDate = new Date();
+    }
+
     // If check-out date is not provided or is in the past, set it to next day
-    if (!guestData.checkOutDate || new Date(guestData.checkOutDate) <= new Date()) {
+    if (
+      !guestData.checkOutDate ||
+      new Date(guestData.checkOutDate) <= new Date()
+    ) {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       guestData.checkOutDate = tomorrow;
@@ -461,17 +472,21 @@ exports.checkInGuest = async (req, res, next) => {
     // Calculate automatic billing charges based on hotel policies
     let billingCalculation;
     let billItems = [];
-    
+
     try {
-      billingCalculation = await AutomaticBillingService.calculateAutomaticBilling(
-        guest,
-        room,
-        req.subdomain
-      );
-      
+      billingCalculation =
+        await AutomaticBillingService.calculateAutomaticBilling(
+          guest,
+          room,
+          req.subdomain
+        );
+
       // Generate billing items from the calculation
-      billItems = AutomaticBillingService.generateBillingItems(billingCalculation, room.number);
-      
+      billItems = AutomaticBillingService.generateBillingItems(
+        billingCalculation,
+        room.number
+      );
+
       console.log(`✅ Automatic billing calculated for guest ${guest.name}:`, {
         totalCharges: billingCalculation.totalCharges,
         baseCharges: billingCalculation.baseCharges,
@@ -489,18 +504,20 @@ exports.checkInGuest = async (req, res, next) => {
       );
       const roomChargePerNight = room.price || 0;
       const totalRoomCharge = numberOfNights * roomChargePerNight;
-      
-      billItems = [{
-        type: "room_charge",
-        description: `Room ${room.number} - ${numberOfNights} night(s)`,
-        amount: totalRoomCharge,
-        quantity: numberOfNights,
-        unitPrice: roomChargePerNight,
-        addedBy: "System",
-        date: new Date(),
-        notes: "Basic room charge (automatic billing failed)",
-      }];
-      
+
+      billItems = [
+        {
+          type: "room_charge",
+          description: `Room ${room.number} - ${numberOfNights} night(s)`,
+          amount: totalRoomCharge,
+          quantity: numberOfNights,
+          unitPrice: roomChargePerNight,
+          addedBy: "System",
+          date: new Date(),
+          notes: "Basic room charge (automatic billing failed)",
+        },
+      ];
+
       billingCalculation = {
         totalCharges: totalRoomCharge,
         baseCharges: totalRoomCharge,
@@ -823,7 +840,9 @@ exports.updateGuest = async (req, res, next) => {
         });
 
         if (bill) {
-          console.log(`Updating bill for guest ${guest.name} due to date changes`);
+          console.log(
+            `Updating bill for guest ${guest.name} due to date changes`
+          );
           await AutomaticBillingService.updateBillWithAutomaticCharges(
             bill,
             guest,
@@ -833,7 +852,10 @@ exports.updateGuest = async (req, res, next) => {
           console.log(`✅ Bill updated for guest ${guest.name}`);
         }
       } catch (billingError) {
-        console.error("Error updating bill after guest date change:", billingError);
+        console.error(
+          "Error updating bill after guest date change:",
+          billingError
+        );
         // Don't fail the guest update if billing update fails
       }
     }
@@ -1233,6 +1255,128 @@ exports.createGuest = async (req, res, next) => {
     });
   } catch (error) {
     console.error("Create guest error:", error);
+    next(new ErrorResponse("Server error", 500));
+  }
+};
+
+// @desc    Extend guest stay (update checkout date)
+// @route   PUT /api/guests/:id/extend-stay
+// @access  Private/Manager
+exports.extendGuestStay = async (req, res, next) => {
+  try {
+    const { newCheckOutDate, extendedBy } = req.body;
+
+    if (!newCheckOutDate) {
+      return res.status(400).json({
+        success: false,
+        message: "New checkout date is required",
+      });
+    }
+
+    if (!extendedBy) {
+      return res.status(400).json({
+        success: false,
+        message: "Extended by field is required",
+      });
+    }
+
+    // Use tenant models
+    if (!req.tenantModels || !req.tenantModels.Guest) {
+      return res.status(500).json({
+        success: false,
+        error: "Tenant database not properly initialized",
+      });
+    }
+    const Guest = req.tenantModels.Guest;
+    const Room = req.tenantModels.Room;
+    const Bill = req.tenantModels.Bill;
+
+    const guest = await Guest.findById(req.params.id);
+    if (!guest) {
+      return next(new ErrorResponse("Guest not found", 404));
+    }
+
+    if (guest.status !== "checked_in") {
+      return res.status(400).json({
+        success: false,
+        message: "Guest must be checked in to extend stay",
+      });
+    }
+
+    const newCheckOut = new Date(newCheckOutDate);
+    const currentCheckOut = new Date(guest.checkOutDate);
+
+    // Validate new checkout date is after current checkout date
+    if (newCheckOut <= currentCheckOut) {
+      return res.status(400).json({
+        success: false,
+        message: "New checkout date must be after current checkout date",
+      });
+    }
+
+    // Update guest checkout date
+    const oldCheckOutDate = guest.checkOutDate;
+    guest.checkOutDate = newCheckOut;
+
+    // Add note about extension
+    const extensionNote = `Stay extended from ${oldCheckOutDate.toDateString()} to ${newCheckOut.toDateString()} by ${extendedBy}`;
+    guest.notes = guest.notes
+      ? `${guest.notes}\n${extensionNote}`
+      : extensionNote;
+
+    await guest.save();
+
+    // Get room information for billing recalculation
+    const room = await Room.findById(guest.room);
+    if (!room) {
+      return next(new ErrorResponse("Room not found", 404));
+    }
+
+    // Find and update the bill
+    const bill = await Bill.findOne({
+      guest: guest._id,
+      status: { $in: ["active", "partially_paid", "paid"] },
+      isGuestCheckedOut: false,
+    });
+
+    if (bill) {
+      // Update bill checkout date
+      bill.checkOutDate = newCheckOut;
+
+      // Recalculate billing with new dates
+      const result =
+        await AutomaticBillingService.updateBillWithAutomaticCharges(
+          bill,
+          guest,
+          room,
+          req.subdomain
+        );
+
+      console.log(
+        `✅ Guest ${guest.name} stay extended to ${newCheckOut.toDateString()}`
+      );
+      console.log(
+        `✅ Bill ${bill.billNumber} updated - New total: ₹${result.bill.totalAmount}`
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "Guest stay extended successfully",
+        data: {
+          guest,
+          bill: result.bill,
+          billingCalculation: result.billingCalculation,
+        },
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        message: "Guest stay extended successfully (no active bill found)",
+        data: { guest },
+      });
+    }
+  } catch (error) {
+    console.error("Extend guest stay error:", error);
     next(new ErrorResponse("Server error", 500));
   }
 };

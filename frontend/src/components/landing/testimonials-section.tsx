@@ -85,11 +85,11 @@ const trustedCompanies = [
 
 export function TestimonialsSection() {
   return (
-    <section id="testimonials" className="py-20 bg-stone-50">
+    <section id="testimonials" className="py-20 bg-white">
       <div className="container mx-auto px-4">
         <div className="max-w-7xl mx-auto">
           {/* Section Header */}
-          {/* <motion.div
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -106,7 +106,7 @@ export function TestimonialsSection() {
               See how hotels worldwide are transforming operations and boosting
               revenue.
             </p>
-          </motion.div> */}
+          </motion.div>
 
           {/* Testimonials Grid */}
           {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
@@ -151,7 +151,7 @@ export function TestimonialsSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="bg-white border border-gray-200 rounded-sm p-4"
+            className="bg-white border-gray-200 rounded-sm p-4"
           >
             <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">
               Why Hotels Switch to Innexora

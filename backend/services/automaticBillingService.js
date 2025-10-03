@@ -34,8 +34,28 @@ class AutomaticBillingService {
       } = hotel;
 
       // Parse dates
-      const checkInDate = new Date(guest.checkInDate);
-      const checkOutDate = new Date(guest.checkOutDate);
+      // Use actual check-in date if available, otherwise use expected check-in date
+      const checkInDate = guest.actualCheckInDate
+        ? new Date(guest.actualCheckInDate)
+        : new Date(guest.checkInDate);
+
+      // CRITICAL FIX: For guests still checked in, use current date instead of expected checkOutDate
+      // This ensures billing increases as time passes for guests who haven't checked out
+      let checkOutDate;
+      if (guest.status === "checked_in" && !guest.actualCheckOutDate) {
+        // Guest is still checked in - use current time for billing calculation
+        checkOutDate = new Date();
+        console.log(
+          `📊 Guest ${guest.name} still checked in - calculating billing until current time`
+        );
+      } else if (guest.actualCheckOutDate) {
+        // Guest has checked out - use actual checkout time
+        checkOutDate = new Date(guest.actualCheckOutDate);
+      } else {
+        // Guest is not checked in or fallback - use expected checkout date
+        checkOutDate = new Date(guest.checkOutDate);
+      }
+
       const roomPrice = room.price || 0;
 
       // Calculate base charges (nights × room_rate)
@@ -71,6 +91,10 @@ class AutomaticBillingService {
         totalCharges,
         nights,
         roomPrice,
+        checkInDate,
+        checkOutDate, // This will now be current time for ongoing stays
+        isOngoingStay:
+          guest.status === "checked_in" && !guest.actualCheckOutDate,
         policies: {
           standard_checkin_time,
           standard_checkout_time,
