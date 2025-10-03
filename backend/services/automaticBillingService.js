@@ -58,8 +58,27 @@ class AutomaticBillingService {
 
       const roomPrice = room.price || 0;
 
+      console.log(`💵 Billing calculation for guest ${guest.name}:`, {
+        roomPrice,
+        roomObject: { price: room.price, number: room.number, type: room.type },
+        checkInDate: checkInDate.toISOString(),
+        checkOutDate: checkOutDate.toISOString(),
+        hotelPolicies: {
+          early_checkin_policy,
+          late_checkout_policy,
+          standard_checkin_time,
+          standard_checkout_time,
+        },
+      });
+
       // Calculate base charges (nights × room_rate)
-      const nights = this.calculateNights(checkInDate, checkOutDate);
+      // Nights are counted up to standard checkout time - late checkout fees cover extra time
+      const nights = this.calculateNights(
+        checkInDate,
+        checkOutDate,
+        standard_checkout_time,
+        hotel.timezone || "Asia/Kolkata"
+      );
       const baseCharges = roomPrice * nights;
 
       // Calculate early check-in charges using hotel timezone
@@ -117,15 +136,71 @@ class AutomaticBillingService {
 
   /**
    * Calculate number of nights between check-in and check-out
+   * Nights are calculated up to the standard checkout time on the checkout date
+   * Any time after standard checkout is charged separately via late checkout fees
    * @param {Date} checkInDate - Check-in date
    * @param {Date} checkOutDate - Check-out date
+   * @param {Number} standardCheckoutTime - Standard checkout hour (0-23)
+   * @param {String} timezone - Hotel timezone
    * @returns {Number} Number of nights
    */
-  static calculateNights(checkInDate, checkOutDate) {
-    const timeDiff = checkOutDate.getTime() - checkInDate.getTime();
-    const days = timeDiff / (1000 * 60 * 60 * 24);
-    // Use ceiling to properly count nights like the frontend
-    return Math.max(1, Math.ceil(days));
+  static calculateNights(
+    checkInDate,
+    checkOutDate,
+    standardCheckoutTime = 12,
+    timezone = "Asia/Kolkata"
+  ) {
+    // Get calendar dates in the hotel's timezone
+    const checkInDateStr = checkInDate.toLocaleString("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+
+    const checkOutDateStr = checkOutDate.toLocaleString("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+
+    // Parse the date strings to get calendar days (MM/DD/YYYY format)
+    const [checkInMonth, checkInDay, checkInYear] = checkInDateStr.split("/");
+    const [checkOutMonth, checkOutDay, checkOutYear] =
+      checkOutDateStr.split("/");
+
+    // Create UTC dates at midnight for comparison
+    const checkInCalendar = new Date(
+      Date.UTC(
+        parseInt(checkInYear),
+        parseInt(checkInMonth) - 1,
+        parseInt(checkInDay),
+        0,
+        0,
+        0,
+        0
+      )
+    );
+
+    const checkOutCalendar = new Date(
+      Date.UTC(
+        parseInt(checkOutYear),
+        parseInt(checkOutMonth) - 1,
+        parseInt(checkOutDay),
+        0,
+        0,
+        0,
+        0
+      )
+    );
+
+    // Calculate difference in calendar days
+    const timeDiff = checkOutCalendar.getTime() - checkInCalendar.getTime();
+    const nights = timeDiff / (1000 * 60 * 60 * 24);
+
+    // Minimum 1 night, even for same-day checkout
+    return Math.max(1, Math.round(nights));
   }
 
   /**
@@ -143,11 +218,14 @@ class AutomaticBillingService {
     roomPrice,
     timezone = "Asia/Kolkata"
   ) {
-    // Convert check-in date to hotel's local time
-    const checkInLocal = new Date(
-      checkInDate.toLocaleString("en-US", { timeZone: timezone })
+    // Get the hour in the hotel's timezone
+    const checkInHour = parseInt(
+      checkInDate.toLocaleString("en-US", {
+        timeZone: timezone,
+        hour: "numeric",
+        hour12: false,
+      })
     );
-    const checkInHour = checkInLocal.getHours();
 
     // If check-in is at or after standard time, no early check-in charges
     if (checkInHour >= standardCheckinTime) {
@@ -191,34 +269,52 @@ class AutomaticBillingService {
     roomPrice,
     timezone = "Asia/Kolkata"
   ) {
-    // Convert check-out date to hotel's local time
-    const checkOutLocal = new Date(
-      checkOutDate.toLocaleString("en-US", { timeZone: timezone })
+    // Get the hour in the hotel's timezone
+    const checkOutHour = parseInt(
+      checkOutDate.toLocaleString("en-US", {
+        timeZone: timezone,
+        hour: "numeric",
+        hour12: false,
+      })
     );
-    const checkOutHour = checkOutLocal.getHours();
+
+    console.log(`🕐 Late checkout calculation:`, {
+      checkOutDate: checkOutDate.toISOString(),
+      checkOutHour,
+      standardCheckoutTime,
+      policy,
+      roomPrice,
+      timezone,
+    });
 
     // If check-out is at or before standard time, no late check-out charges
     if (checkOutHour <= standardCheckoutTime) {
+      console.log(
+        `✅ No late checkout - checked out at ${checkOutHour}, standard is ${standardCheckoutTime}`
+      );
       return 0;
     }
 
-    // If check-out is after 6 PM, always charge full night
-    if (checkOutHour > 18) {
-      return roomPrice;
-    }
-
-    // If check-out is between standard check-out time and 6 PM, apply policy
-    if (checkOutHour > standardCheckoutTime && checkOutHour <= 18) {
+    // If check-out is after standard time, apply the hotel's policy
+    if (checkOutHour > standardCheckoutTime) {
+      let charge = 0;
       switch (policy) {
         case "free":
-          return 0;
+          charge = 0;
+          break;
         case "half_rate":
-          return roomPrice * 0.5;
+          charge = roomPrice * 0.5;
+          break;
         case "full_rate":
-          return roomPrice;
+          charge = roomPrice;
+          break;
         default:
-          return 0;
+          charge = 0;
       }
+      console.log(
+        `💰 Late checkout at ${checkOutHour} (after ${standardCheckoutTime}) - policy: ${policy}, charging: ${charge}`
+      );
+      return charge;
     }
 
     return 0;

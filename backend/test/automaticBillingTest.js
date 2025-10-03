@@ -13,6 +13,13 @@ const mockMainHotel = {
   },
 };
 
+// Mock database manager
+const mockDatabaseManager = {
+  getMainConnection: () => ({
+    model: (name, schema) => mockMainHotel,
+  }),
+};
+
 // Mock hotels data
 const mockHotels = {
   demo: {
@@ -21,6 +28,7 @@ const mockHotels = {
     standard_checkout_time: 12,
     early_checkin_policy: "half_rate",
     late_checkout_policy: "half_rate",
+    timezone: "UTC", // Use UTC for test consistency
   },
   "demo-free-early": {
     subdomain: "demo-free-early",
@@ -28,6 +36,7 @@ const mockHotels = {
     standard_checkout_time: 12,
     early_checkin_policy: "free",
     late_checkout_policy: "half_rate",
+    timezone: "UTC",
   },
   "demo-free-late": {
     subdomain: "demo-free-late",
@@ -35,6 +44,7 @@ const mockHotels = {
     standard_checkout_time: 12,
     early_checkin_policy: "half_rate",
     late_checkout_policy: "free",
+    timezone: "UTC",
   },
   "demo-full-early": {
     subdomain: "demo-full-early",
@@ -42,15 +52,19 @@ const mockHotels = {
     standard_checkout_time: 12,
     early_checkin_policy: "full_rate",
     late_checkout_policy: "half_rate",
+    timezone: "UTC",
   },
 };
 
-// Mock the MainHotel module
-const Module = require('module');
+// Mock the MainHotel module and databaseManager
+const Module = require("module");
 const originalRequire = Module.prototype.require;
-Module.prototype.require = function(id) {
-  if (id === '../models/MainHotel') {
+Module.prototype.require = function (id) {
+  if (id === "../models/MainHotel") {
     return { default: mockMainHotel, ...mockMainHotel };
+  }
+  if (id === "../utils/databaseManager") {
+    return mockDatabaseManager;
   }
   return originalRequire.apply(this, arguments);
 };
@@ -100,14 +114,14 @@ const testCases = [
     expected: 7500, // 5000 (base) + 2500 (late check-out half rate)
   },
   {
-    name: "Case 5: Late Check-out (9 PM) - Full Rate",
+    name: "Case 5: Late Check-out (9 PM) - Half Rate",
     guest: {
       checkInDate: new Date("2024-09-20T14:00:00Z"), // 2 PM
       checkOutDate: new Date("2024-09-21T21:00:00Z"), // 9 PM
     },
     room: { price: 5000 },
     hotelSubdomain: "demo",
-    expected: 10000, // 5000 (base) + 5000 (late check-out full rate)
+    expected: 7500, // 5000 (base) + 2500 (late check-out half rate, now applies even after 6 PM)
   },
   {
     name: "Case 6: Multiple Nights + Late Checkout",
@@ -161,7 +175,6 @@ const testCases = [
   },
 ];
 
-
 async function runBillingTests() {
   console.log("🧪 Running Automatic Billing Tests\n");
   console.log("=".repeat(60));
@@ -180,20 +193,24 @@ async function runBillingTests() {
       console.log(`${status} ${result.testCase}`);
       console.log(`   Expected: ₹${result.expected}`);
       console.log(`   Actual: ₹${result.actual}`);
-      
+
       if (result.breakdown) {
         console.log(`   Breakdown:`);
         console.log(`     Base Nights: ${result.breakdown.baseNights}`);
         console.log(`     Base Amount: ₹${result.breakdown.baseAmount}`);
-        console.log(`     Early Check-in: ₹${result.breakdown.earlyCheckinAmount}`);
-        console.log(`     Late Check-out: ₹${result.breakdown.lateCheckoutAmount}`);
+        console.log(
+          `     Early Check-in: ₹${result.breakdown.earlyCheckinAmount}`
+        );
+        console.log(
+          `     Late Check-out: ₹${result.breakdown.lateCheckoutAmount}`
+        );
         console.log(`     Total: ₹${result.breakdown.totalAmount}`);
       }
-      
+
       if (result.error) {
         console.log(`   Error: ${result.error}`);
       }
-      
+
       console.log();
 
       if (result.passed) {
@@ -208,7 +225,7 @@ async function runBillingTests() {
 
   console.log("=".repeat(60));
   console.log(`📊 Test Results: ${passedTests}/${totalTests} tests passed`);
-  
+
   if (passedTests === totalTests) {
     console.log("🎉 All tests passed! Automatic billing is working correctly.");
   } else {
